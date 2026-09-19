@@ -53,17 +53,25 @@ bool Economy::Sample(HouseClass* const pHouse)
 		return false;
 	}
 
-	obs.IncomeRate = harvested - obs.LastHarvested; // credits gained this window
 	obs.SpendRate = spent - obs.LastSpent;          // credits spent this window
 	obs.PrevFloat = obs.FloatNow;
 	obs.FloatNow = money;
 	obs.FloatTrend = obs.FloatNow - obs.PrevFloat;
+
+	// HarvestedCredits reads constant in this stack (verified in-game: money
+	// demonstrably flowed in — float rose while spending continued — yet the
+	// field delta stayed 0). So derive income from the accounting identity:
+	//   money in = change in liquid worth + money out.
+	// This also captures non-harvest income (cheat grants, crates, tech
+	// buildings), which is exactly what an "economy strength" signal wants.
+	int const harvestDelta = harvested - obs.LastHarvested; // reference only
+	obs.IncomeRate = obs.FloatTrend + obs.SpendRate;
 	obs.LastHarvested = harvested;
 	obs.LastSpent = spent;
 
 	if (cfg.DebugTicks)
-		Debug::Log("[DossierExt] econ %s#%d f%d: float=%d (trend %+d/win) income=%d/win spend=%d/win net=%+d/win\n",
+		Debug::Log("[DossierExt] econ %s#%d f%d: float=%d (trend %+d/win) income=%d/win spend=%d/win net=%+d/win (harvestFld=%d)\n",
 			pHouse->get_ID(), idx, frame, obs.FloatNow, obs.FloatTrend,
-			obs.IncomeRate, obs.SpendRate, obs.IncomeRate - obs.SpendRate);
+			obs.IncomeRate, obs.SpendRate, obs.IncomeRate - obs.SpendRate, harvestDelta);
 	return true;
 }
