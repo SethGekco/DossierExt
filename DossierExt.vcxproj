@@ -33,6 +33,11 @@
     <ClCompile Include="src\Dossier\Identity.cpp" />
     <ClCompile Include="src\Dossier\Profile.cpp" />
     <ClCompile Include="src\Dossier\Engine.cpp" />
+    <ClCompile Include="src\Dossier\Observatory.cpp" />
+    <ClCompile Include="src\Dossier\Economy.cpp" />
+    <ClCompile Include="src\Dossier\Survey.cpp" />
+    <ClCompile Include="src\Dossier\Production.cpp" />
+    <ClCompile Include="src\Dossier\Scoreboard.cpp" />
   </ItemGroup>
 
   <!-- Header files -->
@@ -42,6 +47,11 @@
     <ClInclude Include="src\Dossier\Identity.h" />
     <ClInclude Include="src\Dossier\Profile.h" />
     <ClInclude Include="src\Dossier\Engine.h" />
+    <ClInclude Include="src\Dossier\Observatory.h" />
+    <ClInclude Include="src\Dossier\Economy.h" />
+    <ClInclude Include="src\Dossier\Survey.h" />
+    <ClInclude Include="src\Dossier\Production.h" />
+    <ClInclude Include="src\Dossier\Scoreboard.h" />
   </ItemGroup>
 
   <PropertyGroup Label="Globals">

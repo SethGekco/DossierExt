@@ -27,6 +27,22 @@ struct DossierConfig
 	int CheckpointInterval = 3000;          // frames between profile flushes
 	std::string ProfileDir = "DossierProfiles";
 
+	// Phase 1 — Observatory
+	int EconWindow = 450;                    // frames per economy sample
+	int SurveyPeriod = 900;                  // frames between map/army scans
+	int OreReachRadius = 30;                 // cells: "reachable ore" near base
+	int ScoreboardPeriod = 450;              // frames between standing re-evals
+
+	// Phase 1 — [Dossier.Scoreboard] (tier thresholds; DESIGN §5c)
+	double LosingBelow = 0.8;                // standing ratio -> LOSING
+	double DesperateBelow = 0.5;             // -> DESPERATE
+	double WinningAbove = 1.3;               // -> WINNING
+	double Hysteresis = 0.1;                 // band to climb back out of a tier
+	// Standing formula weights (open question #3: start equal thirds)
+	double ArmyWeight = 1.0;
+	double EconWeight = 1.0;
+	double TerritoryWeight = 1.0;
+
 	// DossierExt.* keys, indexed by AIDifficulty (0=Hard, 1=Normal, 2=Easy —
 	// the engine's inverted enum; resolution helpers hide the confusion).
 	DossierDifficultyKeys Diff[3];

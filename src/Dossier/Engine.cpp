@@ -2,6 +2,10 @@
 #include "Dossier/Config.h"
 #include "Dossier/Identity.h"
 #include "Dossier/Profile.h"
+#include "Dossier/Observatory.h"
+#include "Dossier/Economy.h"
+#include "Dossier/Survey.h"
+#include "Dossier/Scoreboard.h"
 
 #include <HouseClass.h>
 #include <Unsorted.h>
@@ -53,6 +57,16 @@ void Engine::TickHouse(HouseClass* const pHouse)
 		return;
 
 	Identity::EnsureRoster();
+
+	// ── Observatory (Phase 1) ────────────────────────────────────────────
+	// Survey self-gates on frame, so calling it from every house tick runs it
+	// once per SurveyPeriod. Economy + Scoreboard self-gate per house.
+	Survey::MaybeRun();
+	if (!pHouse->IsObserver() && !pHouse->IsNeutral())
+	{
+		Economy::Sample(pHouse);
+		Scoreboard::Evaluate(pHouse);
+	}
 
 	// Outcome polling — only for houses we opened a dossier on.
 	if (auto const pProfile = Profile::FindByHouse(pHouse->ArrayIndex))

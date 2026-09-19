@@ -235,6 +235,39 @@ itself a sign for §4, and game-end standing curves go into the dossier
    levers. Keeps the brains separate, per the established one-primitive-per-DLL
    rule.
 
+### 6a. Trigger track-record learning (moved from the tool TODO, 2026-09-18)
+
+The cross-game half of the weight system. AITriggerTypeExt already ships the
+WITHIN-game half (per-trigger Success/FailureWeightDelta overrides +
+cross-trigger cascades, both live and verified) — everything below is what
+that system deliberately does NOT do, and lands here instead.
+
+- **Per-player trigger track record.** Record each trigger dispatch outcome
+  (success/failure, from the same engine outcome path ATTExt's
+  RegisterSuccess/Failure hooks observe — resolve our own seat via the
+  registry, no compile coupling) into the profile, keyed player × country ×
+  trigger, recency-weighted like every other dossier fact.
+- **Weight priors at game start.** On scenario open, convert the track record
+  into starting weights via the master-control lever (actuator #1): triggers
+  that historically land against THIS player start heavy, proven losers start
+  light — instead of every game re-learning from the static INI weights.
+  `[Dossier.WeightLearning]` PriorDelta= / PriorClamp= / MinGames= keys.
+- **Trigger families.** Cross-game generalization needs grouping ("aerial
+  approaches fail vs this player", not just "trigger 0BB2A99C failed") — an
+  INI catalog `[Dossier.TriggerFamilies]` Aerial=trigID,trigID,… (the wave
+  tool can emit it at generation time since it knows each wave's role).
+  Family-level priors are the cross-game analog of ATTExt's cascades.
+- **Habit-based enable/disable.** A family ≥X% failed over the last N games
+  vs this player gets force-disabled at start (re-evaluated mid-game);
+  a proven opener gets its window boosted. This is actuator #1 driven by
+  memory instead of by live prediction.
+- **Honesty tier:** this is memory, not wallhack — per §5 decisions,
+  cross-game habits are fair game, so these levers default `Always`; each
+  still gets its own [Dossier.Escalation] key for modders who disagree.
+- **Boundary (restate):** ATTExt owns within-game deltas/cascades; DossierExt
+  owns across-game priors + habit gating, acting only through the engine
+  tables from above. MP: profile-driven, so single-human-only per §7.
+
 ## 7. Hard constraints (learned the hard way elsewhere)
 
 - **Desync.** Live Observatory sensing reads synced sim state → MP-safe. But
