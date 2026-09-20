@@ -105,7 +105,22 @@ void Survey::MaybeRun()
 		else
 		{
 			obs.ArmyValue += cost;
+			// Phase 2: time-weighted unit-mix histogram (this survey's snapshot
+			// counts once; accumulated across the game).
+			if (auto const pId = pType->get_ID())
+			{
+				++obs.UnitMix[pId];
+				++obs.UnitMixSamples;
+			}
 		}
+	}
+
+	// Phase 2: peak army/building value over the game.
+	for (int i = 0; i < HouseClass::Array.Count; ++i)
+	{
+		auto& obs = Observatory::Get(i);
+		if (obs.ArmyValue > obs.PeakArmy) obs.PeakArmy = obs.ArmyValue;
+		if (obs.BuildingValue > obs.PeakBuilding) obs.PeakBuilding = obs.BuildingValue;
 	}
 
 	// ── Ore survey: collect ore cells once, then per-house nearest/reachable

@@ -1,6 +1,9 @@
 #pragma once
 
 #include <map>
+#include <string>
+#include <utility>
+#include <vector>
 
 class HouseClass;
 
@@ -44,6 +47,27 @@ struct HouseObs
 	double Standing = 1.0;          // raw self/enemy strength this eval
 	double SmoothedStanding = 1.0;  // EMA momentum score the tier is read from
 	Tier CurrentTier = Tier::Even;
+
+	// ── Phase 2 per-game accumulation (distilled into the profile at end) ─
+	// Opening build order: (frame, BuildingType array index), in order, capped.
+	std::vector<std::pair<int, int>> BuildOrder;
+	// Time-weighted unit-mix: type ID (e.g. "HTNK") -> Σ (count seen per
+	// survey). Normalise to fractions at distill time. Keyed by ID string to
+	// avoid index collisions across Unit/Infantry/Aircraft type arrays.
+	std::map<std::string, long long> UnitMix;
+	long long UnitMixSamples = 0;  // Σ units counted across surveys (denominator)
+	// Economy habits.
+	int MaxFloat = 0;
+	long long SumIncome = 0;       // Σ smoothed income over samples
+	int IncomeSamples = 0;
+	double PeakIncome = 0;
+	// Peaks.
+	long long PeakArmy = 0;
+	long long PeakBuilding = 0;
+	// Aggression (KillTracker hook).
+	int FirstKillFrame = -1;       // frame this house scored its first kill
+	int KillsDealt = 0;
+	int LossesTaken = 0;
 };
 
 namespace Observatory

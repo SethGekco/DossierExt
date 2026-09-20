@@ -96,10 +96,27 @@ namespace
 			}
 			else if (!section.compare(0, 8, "Country."))
 			{
-				auto& rec = profile.Countries[section.substr(8)];
-				if (!std::strcmp(key, "Played")) rec.Played = std::atoi(value);
-				else if (!std::strcmp(key, "Won")) rec.Won = std::atoi(value);
-				else if (!std::strcmp(key, "Lost")) rec.Lost = std::atoi(value);
+				// section is "Country.<C>", "Country.<C>.UnitMix", or
+				// "Country.<C>.Opening".
+				std::string const rest = section.substr(8);
+				auto const dot = rest.find('.');
+				std::string const country = rest.substr(0, dot);
+				auto& rec = profile.Countries[country];
+				if (dot == std::string::npos)
+				{
+					if (!std::strcmp(key, "Played")) rec.Played = std::atoi(value);
+					else if (!std::strcmp(key, "Won")) rec.Won = std::atoi(value);
+					else if (!std::strcmp(key, "Lost")) rec.Lost = std::atoi(value);
+					else if (!std::strcmp(key, "HabitSamples")) rec.HabitSamples = std::atoi(value);
+					else if (!std::strcmp(key, "AvgIncome")) rec.AvgIncome = std::atof(value);
+					else if (!std::strcmp(key, "AvgPeakArmy")) rec.AvgPeakArmy = std::atof(value);
+					else if (!std::strcmp(key, "AvgMaxFloat")) rec.AvgMaxFloat = std::atof(value);
+					else if (!std::strcmp(key, "AvgFirstKill")) rec.AvgFirstKill = std::atof(value);
+				}
+				else if (rest.compare(dot + 1, std::string::npos, "UnitMix") == 0)
+					rec.UnitMix[key] = std::atof(value);
+				else if (rest.compare(dot + 1, std::string::npos, "Opening") == 0)
+					rec.Opening.push_back(value); // "frame:TypeID"
 			}
 		}
 		std::fclose(f);
@@ -157,8 +174,25 @@ bool Profile::Save(PlayerProfile& profile, const char* const lastOutcome)
 	std::fprintf(f, "LastSeen=%s\nLastCountry=%s\nLastOutcome=%s\n",
 		Timestamp().c_str(), profile.CurrentCountry.c_str(), lastOutcome);
 	for (auto const& [country, rec] : profile.Countries)
-		std::fprintf(f, "\n[Country.%s]\nPlayed=%d\nWon=%d\nLost=%d\n",
-			country.c_str(), rec.Played, rec.Won, rec.Lost);
+	{
+		std::fprintf(f, "\n[Country.%s]\nPlayed=%d\nWon=%d\nLost=%d\nHabitSamples=%d\n",
+			country.c_str(), rec.Played, rec.Won, rec.Lost, rec.HabitSamples);
+		std::fprintf(f, "AvgIncome=%.1f\nAvgPeakArmy=%.1f\nAvgMaxFloat=%.1f\nAvgFirstKill=%.1f\n",
+			rec.AvgIncome, rec.AvgPeakArmy, rec.AvgMaxFloat, rec.AvgFirstKill);
+		if (!rec.UnitMix.empty())
+		{
+			std::fprintf(f, "[Country.%s.UnitMix]\n", country.c_str());
+			for (auto const& [id, frac] : rec.UnitMix)
+				std::fprintf(f, "%s=%.3f\n", id.c_str(), frac);
+		}
+		if (!rec.Opening.empty())
+		{
+			std::fprintf(f, "[Country.%s.Opening]\n", country.c_str());
+			int n = 0;
+			for (auto const& ev : rec.Opening)
+				std::fprintf(f, "%d=%s\n", n++, ev.c_str());
+		}
+	}
 	std::fclose(f);
 
 	profile.Dirty = false;

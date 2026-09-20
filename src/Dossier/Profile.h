@@ -2,16 +2,26 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 // One dossier = one INI file per human player identity, kept on disk between
-// games (DESIGN.md §2b/§3). Phase 0 scope: the [Meta] counters and per-country
-// played/won/lost stubs — just enough to prove the identity→read→play→write
-// round trip. Local file only; it never feeds sim decisions in this phase.
+// games (DESIGN.md §2b/§3). Phase 2 distils each game's Observatory data into
+// recency-weighted per-country habits: opening fingerprint, unit-mix, economy,
+// aggression. Local file only; it does not feed sim decisions yet.
 struct CountryRecord
 {
 	int Played = 0;
 	int Won = 0;
 	int Lost = 0;
+
+	// Recency-weighted habit aggregates (EMA across games; see Distill).
+	int HabitSamples = 0;           // how many games have folded in
+	double AvgIncome = 0;           // sustained income per econ window
+	double AvgPeakArmy = 0;         // typical peak army value
+	double AvgMaxFloat = 0;         // typical peak unspent cash (floats money?)
+	double AvgFirstKill = -1;       // aggression onset (frame of first kill)
+	std::map<std::string, double> UnitMix; // folded composition fractions
+	std::vector<std::string> Opening;      // "frame:TypeID", most recent game
 };
 
 struct PlayerProfile

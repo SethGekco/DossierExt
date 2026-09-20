@@ -75,6 +75,12 @@ bool Economy::Sample(HouseClass* const pHouse)
 	obs.LastHarvested = harvested;
 	obs.LastSpent = spent;
 
+	// Phase 2 economy habits.
+	if (obs.FloatNow > obs.MaxFloat) obs.MaxFloat = obs.FloatNow;
+	if (obs.SmoothedIncome > obs.PeakIncome) obs.PeakIncome = obs.SmoothedIncome;
+	obs.SumIncome += static_cast<long long>(obs.SmoothedIncome);
+	++obs.IncomeSamples;
+
 	if (cfg.DebugTicks)
 		Debug::Log("[DossierExt] econ %s#%d f%d: float=%d (trend %+d/win) income=%d/win (smooth=%.0f) spend=%d/win net=%+d/win (harvestFld=%d)\n",
 			pHouse->get_ID(), idx, frame, obs.FloatNow, obs.FloatTrend,

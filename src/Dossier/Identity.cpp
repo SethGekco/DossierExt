@@ -5,10 +5,70 @@
 #include <HouseClass.h>
 #include <Utilities/Debug.h>
 
+#include <cstdio>
+#include <cstring>
+#include <string>
+
 namespace
 {
 	bool g_resolved = false;
 	int g_humans = 0;
+	std::string g_localName;   // spawn.ini [Settings] Name — the local human
+
+	// The launcher rewrites spawn.ini with the real player names at launch; the
+	// house PlainName is only the literal "<human player>" placeholder in
+	// skirmish. Read [Settings] Name once so the local human gets a real
+	// identity. (Reading spawn.ini is safe; only WRITING flags there is futile
+	// — [[spawn-ini-rewritten-at-launch]].)
+	void LoadSpawnName()
+	{
+		g_localName.clear();
+		FILE* const f = std::fopen("spawn.ini", "r");
+		if (!f)
+			return;
+		char line[256];
+		bool inSettings = false;
+		while (std::fgets(line, sizeof(line), f))
+		{
+			char* s = line;
+			while (*s == ' ' || *s == '\t') ++s;
+			if (*s == '[')
+			{
+				inSettings = (std::strncmp(s, "[Settings]", 10) == 0);
+				continue;
+			}
+			if (!inSettings)
+				continue;
+			if (std::strncmp(s, "Name=", 5) == 0)
+			{
+				char* v = s + 5;
+				char* e = v + std::strlen(v);
+				while (e > v && (e[-1] == '\n' || e[-1] == '\r' || e[-1] == ' ')) --e;
+				*e = '\0';
+				g_localName = v;
+				break;
+			}
+		}
+		std::fclose(f);
+	}
+
+	// Pick the best available identity for a human house.
+	std::string ResolveName(HouseClass* const pHouse)
+	{
+		char const* const plain = pHouse->PlainName;
+		// A real MP lobby name is a normal string; the skirmish placeholder
+		// starts with '<'. Prefer a real PlainName when present.
+		if (plain && *plain && plain[0] != '<')
+			return plain;
+		// Local human in skirmish → spawn.ini name.
+		if (pHouse == HouseClass::CurrentPlayer && !g_localName.empty())
+			return g_localName;
+		// Last resort: country + index, so distinct AIs/humans don't collide.
+		std::string fallback = pHouse->Type ? pHouse->Type->get_ID() : "Unknown";
+		fallback += "_";
+		fallback += std::to_string(pHouse->ArrayIndex);
+		return fallback;
+	}
 }
 
 void Identity::Reset()
@@ -30,6 +90,9 @@ bool Identity::EnsureRoster()
 
 	auto const& cfg = DossierConfig::Instance;
 	g_humans = 0;
+	LoadSpawnName();
+	Debug::Log("[DossierExt] spawn.ini local name = '%s'\n",
+		g_localName.empty() ? "(none)" : g_localName.c_str());
 
 	for (int i = 0; i < HouseClass::Array.Count; ++i)
 	{
@@ -57,7 +120,10 @@ bool Identity::EnsureRoster()
 			profiled ? " [PROFILED]" : "");
 
 		if (profiled)
-			Profile::Open(pHouse->PlainName, pHouse->ArrayIndex, pHouse->get_ID());
+		{
+			std::string const name = ResolveName(pHouse);
+			Profile::Open(name.c_str(), pHouse->ArrayIndex, pHouse->get_ID());
+		}
 	}
 
 	// MP policy (DESIGN.md §7): with 2+ humans the persistent dossier must not

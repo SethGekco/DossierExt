@@ -6,6 +6,7 @@
 #include "Dossier/Economy.h"
 #include "Dossier/Survey.h"
 #include "Dossier/Scoreboard.h"
+#include "Dossier/Distill.h"
 
 #include <HouseClass.h>
 #include <Unsorted.h>
@@ -41,6 +42,11 @@ namespace
 			pHouse->get_ID(), pHouse->ArrayIndex, profile.RawName.c_str(),
 			profile.CurrentCountry.c_str(), won ? "WON" : "LOST",
 			pHouse->IsWinner, pHouse->IsLoser, pHouse->Defeated);
+
+		// Phase 2: fold this game's habits into the persistent per-country
+		// dossier before the final save.
+		if (auto const pObs = Observatory::Find(pHouse->ArrayIndex))
+			Distill::FoldHabits(profile, *pObs);
 		Profile::Save(profile, won ? "Won" : "Lost");
 	}
 }

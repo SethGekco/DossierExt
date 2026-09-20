@@ -53,8 +53,15 @@ void Production::DiffAfterSurvey()
 			int const prev = prevIt != obs.PrevStructCounts.end() ? prevIt->second : 0;
 			int const added = count - prev;
 			if (added > 0)
+			{
 				Debug::Log("[DossierExt] build-order %s#%d f%d: +%d %s (now %d)\n",
 					pHouse->get_ID(), i, frame, added, StructName(typeIdx), count);
+				// Phase 2: record the opening build order (capped) for the
+				// profile's opening fingerprint.
+				if (static_cast<int>(obs.BuildOrder.size()) < cfg.OpeningMaxEvents)
+					for (int n = 0; n < added && static_cast<int>(obs.BuildOrder.size()) < cfg.OpeningMaxEvents; ++n)
+						obs.BuildOrder.emplace_back(frame, typeIdx);
+			}
 		}
 	}
 }

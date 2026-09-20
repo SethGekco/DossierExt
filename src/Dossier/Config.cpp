@@ -7,6 +7,7 @@
 #include "Dossier/Survey.h"
 #include "Dossier/Production.h"
 #include "Dossier/Scoreboard.h"
+#include "Dossier/KillTracker.h"
 
 #include <CCINIClass.h>
 #include <Utilities/Debug.h>
@@ -60,6 +61,8 @@ void DossierConfig::EnsureParsed()
 	cfg.SurveyPeriod = pINI->ReadInteger("Dossier.General", "SurveyPeriod", cfg.SurveyPeriod);
 	cfg.OreReachRadius = pINI->ReadInteger("Dossier.General", "OreReachRadius", cfg.OreReachRadius);
 	cfg.ScoreboardPeriod = pINI->ReadInteger("Dossier.General", "ScoreboardPeriod", cfg.ScoreboardPeriod);
+	cfg.OpeningMaxEvents = pINI->ReadInteger("Dossier.General", "OpeningMaxEvents", cfg.OpeningMaxEvents);
+	cfg.RecencyWeight = pINI->ReadDouble("Dossier.General", "RecencyWeight", cfg.RecencyWeight);
 	Debug::Log("[DossierExt] [Dossier.General]: Enabled=%d DebugTicks=%d CheckpointInterval=%d ProfileDir=%s "
 		"EconWindow=%d EconSmoothing=%.2f SurveyPeriod=%d OreReachRadius=%d ScoreboardPeriod=%d\n",
 		cfg.Enabled, cfg.DebugTicks, cfg.CheckpointInterval, cfg.ProfileDir.c_str(),
@@ -118,6 +121,7 @@ DEFINE_HOOK(0x685659, DossierExt_Scenario_ClearClasses, 0xA)
 	Survey::Reset();
 	Production::Reset();
 	Scoreboard::Reset();
+	KillTracker::Reset();
 	DossierConfig::Reset();
 	DossierConfig::EnsureParsed();
 	return 0;

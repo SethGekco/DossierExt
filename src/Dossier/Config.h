@@ -34,6 +34,10 @@ struct DossierConfig
 	int OreReachRadius = 30;                 // cells: "reachable ore" near base
 	int ScoreboardPeriod = 450;              // frames between standing re-evals
 
+	// Phase 2 — Dossier distillation
+	int OpeningMaxEvents = 40;               // build-order events kept for the opening
+	double RecencyWeight = 0.4;              // EMA weight of THIS game vs history
+
 	// Phase 1 — [Dossier.Scoreboard] (tier thresholds; DESIGN §5c)
 	double LosingBelow = 0.8;                // standing ratio -> LOSING
 	double DesperateBelow = 0.5;             // -> DESPERATE

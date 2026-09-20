@@ -38,6 +38,8 @@
     <ClCompile Include="src\Dossier\Survey.cpp" />
     <ClCompile Include="src\Dossier\Production.cpp" />
     <ClCompile Include="src\Dossier\Scoreboard.cpp" />
+    <ClCompile Include="src\Dossier\KillTracker.cpp" />
+    <ClCompile Include="src\Dossier\Distill.cpp" />
   </ItemGroup>
 
   <!-- Header files -->
@@ -52,6 +54,8 @@
     <ClInclude Include="src\Dossier\Survey.h" />
     <ClInclude Include="src\Dossier\Production.h" />
     <ClInclude Include="src\Dossier\Scoreboard.h" />
+    <ClInclude Include="src\Dossier\KillTracker.h" />
+    <ClInclude Include="src\Dossier\Distill.h" />
   </ItemGroup>
 
   <PropertyGroup Label="Globals">
