@@ -19,7 +19,8 @@ struct HouseObs
 	bool EconInit = false;
 	int LastHarvested = 0;   // HarvestedCredits snapshot
 	int LastSpent = 0;       // CreditsSpent snapshot
-	int IncomeRate = 0;      // harvested delta over the last window
+	int IncomeRate = 0;      // raw money-in this window (float trend + spend)
+	double SmoothedIncome = 0; // EMA of IncomeRate — the scoreboard's econ input
 	int SpendRate = 0;       // spent delta over the last window
 	int FloatNow = 0;        // Available_Money() at last sample
 	int PrevFloat = 0;

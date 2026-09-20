@@ -56,13 +56,14 @@ void DossierConfig::EnsureParsed()
 	pINI->ReadString("Dossier.General", "ProfileDir", cfg.ProfileDir.c_str(), buf, sizeof(buf));
 	cfg.ProfileDir = buf;
 	cfg.EconWindow = pINI->ReadInteger("Dossier.General", "EconWindow", cfg.EconWindow);
+	cfg.EconSmoothing = pINI->ReadDouble("Dossier.General", "EconSmoothing", cfg.EconSmoothing);
 	cfg.SurveyPeriod = pINI->ReadInteger("Dossier.General", "SurveyPeriod", cfg.SurveyPeriod);
 	cfg.OreReachRadius = pINI->ReadInteger("Dossier.General", "OreReachRadius", cfg.OreReachRadius);
 	cfg.ScoreboardPeriod = pINI->ReadInteger("Dossier.General", "ScoreboardPeriod", cfg.ScoreboardPeriod);
 	Debug::Log("[DossierExt] [Dossier.General]: Enabled=%d DebugTicks=%d CheckpointInterval=%d ProfileDir=%s "
-		"EconWindow=%d SurveyPeriod=%d OreReachRadius=%d ScoreboardPeriod=%d\n",
+		"EconWindow=%d EconSmoothing=%.2f SurveyPeriod=%d OreReachRadius=%d ScoreboardPeriod=%d\n",
 		cfg.Enabled, cfg.DebugTicks, cfg.CheckpointInterval, cfg.ProfileDir.c_str(),
-		cfg.EconWindow, cfg.SurveyPeriod, cfg.OreReachRadius, cfg.ScoreboardPeriod);
+		cfg.EconWindow, cfg.EconSmoothing, cfg.SurveyPeriod, cfg.OreReachRadius, cfg.ScoreboardPeriod);
 
 	// ─── [Dossier.Scoreboard] — tier thresholds + standing weights ──────
 	cfg.LosingBelow = pINI->ReadDouble("Dossier.Scoreboard", "Losing.Below", cfg.LosingBelow);

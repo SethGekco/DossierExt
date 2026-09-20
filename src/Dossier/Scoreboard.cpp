@@ -89,7 +89,7 @@ void Scoreboard::Evaluate(HouseClass* const pHouse)
 		if (!pObs)
 			continue;
 		eArmy += static_cast<double>(pObs->ArmyValue);
-		eEcon += static_cast<double>(pObs->IncomeRate);
+		eEcon += pObs->SmoothedIncome;
 		eTerr += static_cast<double>(pObs->OreReachable);
 		++enemies;
 	}
@@ -104,7 +104,7 @@ void Scoreboard::Evaluate(HouseClass* const pHouse)
 	{
 		eArmy /= enemies; eEcon /= enemies; eTerr /= enemies;
 		double const rArmy = Ratio(static_cast<double>(pSelf->ArmyValue), eArmy);
-		double const rEcon = Ratio(static_cast<double>(pSelf->IncomeRate), eEcon);
+		double const rEcon = Ratio(pSelf->SmoothedIncome, eEcon);
 		double const rTerr = Ratio(static_cast<double>(pSelf->OreReachable), eTerr);
 		double const wsum = cfg.ArmyWeight + cfg.EconWeight + cfg.TerritoryWeight;
 		raw = wsum > 0
@@ -129,7 +129,7 @@ void Scoreboard::Evaluate(HouseClass* const pHouse)
 	if (firstEval || pSelf->CurrentTier != prevTier)
 		Debug::Log("[DossierExt] SCOREBOARD %s#%d f%d: %s -> %s (standing=%.2f raw=%.2f; army=%lld econ=%d terr=%lld vs %d enemy)\n",
 			pHouse->get_ID(), idx, frame, TierName(prevTier), TierName(pSelf->CurrentTier),
-			s, raw, pSelf->ArmyValue, pSelf->IncomeRate, pSelf->OreReachable, enemies);
+			s, raw, pSelf->ArmyValue, static_cast<int>(pSelf->SmoothedIncome), pSelf->OreReachable, enemies);
 	else if (cfg.DebugTicks)
 		Debug::Log("[DossierExt] scoreboard %s#%d f%d: %s (standing=%.2f raw=%.2f)\n",
 			pHouse->get_ID(), idx, frame, TierName(pSelf->CurrentTier), s, raw);

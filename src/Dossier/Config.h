@@ -29,6 +29,7 @@ struct DossierConfig
 
 	// Phase 1 — Observatory
 	int EconWindow = 450;                    // frames per economy sample
+	double EconSmoothing = 0.3;              // EMA alpha for income (bursty unloads)
 	int SurveyPeriod = 900;                  // frames between map/army scans
 	int OreReachRadius = 30;                 // cells: "reachable ore" near base
 	int ScoreboardPeriod = 450;              // frames between standing re-evals

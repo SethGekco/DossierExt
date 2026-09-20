@@ -47,6 +47,7 @@ bool Economy::Sample(HouseClass* const pHouse)
 		obs.FloatNow = money;
 		obs.PrevFloat = money;
 		obs.IncomeRate = 0;
+		obs.SmoothedIncome = 0;
 		obs.SpendRate = 0;
 		obs.FloatTrend = 0;
 		obs.EconInit = true;
@@ -66,12 +67,17 @@ bool Economy::Sample(HouseClass* const pHouse)
 	// buildings), which is exactly what an "economy strength" signal wants.
 	int const harvestDelta = harvested - obs.LastHarvested; // reference only
 	obs.IncomeRate = obs.FloatTrend + obs.SpendRate;
+	// Harvesters unload in bursts, so raw income alternates 0 / big-lump per
+	// window. EMA it into the rate the scoreboard actually reads, so the econ
+	// dimension reflects sustained income, not which window caught an unload.
+	double const a = cfg.EconSmoothing;
+	obs.SmoothedIncome = a * obs.IncomeRate + (1.0 - a) * obs.SmoothedIncome;
 	obs.LastHarvested = harvested;
 	obs.LastSpent = spent;
 
 	if (cfg.DebugTicks)
-		Debug::Log("[DossierExt] econ %s#%d f%d: float=%d (trend %+d/win) income=%d/win spend=%d/win net=%+d/win (harvestFld=%d)\n",
+		Debug::Log("[DossierExt] econ %s#%d f%d: float=%d (trend %+d/win) income=%d/win (smooth=%.0f) spend=%d/win net=%+d/win (harvestFld=%d)\n",
 			pHouse->get_ID(), idx, frame, obs.FloatNow, obs.FloatTrend,
-			obs.IncomeRate, obs.SpendRate, obs.IncomeRate - obs.SpendRate, harvestDelta);
+			obs.IncomeRate, obs.SmoothedIncome, obs.SpendRate, obs.IncomeRate - obs.SpendRate, harvestDelta);
 	return true;
 }
