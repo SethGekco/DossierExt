@@ -40,7 +40,8 @@ struct HouseObs
 
 	// ── Scoreboard (Scoreboard.cpp) ─────────────────────────────────────
 	bool TierInit = false;
-	double Standing = 1.0;         // self strength / enemy-average strength
+	double Standing = 1.0;          // raw self/enemy strength this eval
+	double SmoothedStanding = 1.0;  // EMA momentum score the tier is read from
 	Tier CurrentTier = Tier::Even;
 };
 

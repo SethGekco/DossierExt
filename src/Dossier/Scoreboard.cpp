@@ -95,10 +95,10 @@ void Scoreboard::Evaluate(HouseClass* const pHouse)
 	}
 
 	Tier const prevTier = pSelf->CurrentTier;
+	double raw;
 	if (enemies == 0)
 	{
-		pSelf->Standing = 3.0;
-		pSelf->CurrentTier = Tier::Winning;
+		raw = 3.0;
 	}
 	else
 	{
@@ -107,23 +107,30 @@ void Scoreboard::Evaluate(HouseClass* const pHouse)
 		double const rEcon = Ratio(static_cast<double>(pSelf->IncomeRate), eEcon);
 		double const rTerr = Ratio(static_cast<double>(pSelf->OreReachable), eTerr);
 		double const wsum = cfg.ArmyWeight + cfg.EconWeight + cfg.TerritoryWeight;
-		double const standing = wsum > 0
+		raw = wsum > 0
 			? (cfg.ArmyWeight * rArmy + cfg.EconWeight * rEcon + cfg.TerritoryWeight * rTerr) / wsum
 			: 1.0;
-		pSelf->Standing = standing;
-		pSelf->CurrentTier = DecideTier(standing, pSelf->TierInit ? prevTier : BaseTier(standing, cfg), cfg);
 	}
+	pSelf->Standing = raw;
 
+	// Smooth into a momentum score (EMA) so a single spiky window — income
+	// arrives in harvester-sized lumps, army value dips while an MCV deploys —
+	// can't flip the tier. The tier is read from the SMOOTHED value; hysteresis
+	// then guards the recovery edge on top of that.
 	bool const firstEval = !pSelf->TierInit;
+	double const a = cfg.StandingSmoothing;
+	pSelf->SmoothedStanding = firstEval ? raw : (a * raw + (1.0 - a) * pSelf->SmoothedStanding);
+	double const s = pSelf->SmoothedStanding;
+	pSelf->CurrentTier = DecideTier(s, firstEval ? BaseTier(s, cfg) : prevTier, cfg);
 	pSelf->TierInit = true;
 
 	// Tier transitions are the headline; log them unconditionally. Steady-tier
 	// re-evals only under DebugTicks.
 	if (firstEval || pSelf->CurrentTier != prevTier)
-		Debug::Log("[DossierExt] SCOREBOARD %s#%d f%d: %s -> %s (standing=%.2f; army=%lld econ=%d terr=%lld vs %d enemy)\n",
+		Debug::Log("[DossierExt] SCOREBOARD %s#%d f%d: %s -> %s (standing=%.2f raw=%.2f; army=%lld econ=%d terr=%lld vs %d enemy)\n",
 			pHouse->get_ID(), idx, frame, TierName(prevTier), TierName(pSelf->CurrentTier),
-			pSelf->Standing, pSelf->ArmyValue, pSelf->IncomeRate, pSelf->OreReachable, enemies);
+			s, raw, pSelf->ArmyValue, pSelf->IncomeRate, pSelf->OreReachable, enemies);
 	else if (cfg.DebugTicks)
-		Debug::Log("[DossierExt] scoreboard %s#%d f%d: %s (standing=%.2f)\n",
-			pHouse->get_ID(), idx, frame, TierName(pSelf->CurrentTier), pSelf->Standing);
+		Debug::Log("[DossierExt] scoreboard %s#%d f%d: %s (standing=%.2f raw=%.2f)\n",
+			pHouse->get_ID(), idx, frame, TierName(pSelf->CurrentTier), s, raw);
 }

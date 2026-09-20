@@ -69,12 +69,13 @@ void DossierConfig::EnsureParsed()
 	cfg.DesperateBelow = pINI->ReadDouble("Dossier.Scoreboard", "Desperate.Below", cfg.DesperateBelow);
 	cfg.WinningAbove = pINI->ReadDouble("Dossier.Scoreboard", "Winning.Above", cfg.WinningAbove);
 	cfg.Hysteresis = pINI->ReadDouble("Dossier.Scoreboard", "Hysteresis", cfg.Hysteresis);
+	cfg.StandingSmoothing = pINI->ReadDouble("Dossier.Scoreboard", "StandingSmoothing", cfg.StandingSmoothing);
 	cfg.ArmyWeight = pINI->ReadDouble("Dossier.Scoreboard", "ArmyWeight", cfg.ArmyWeight);
 	cfg.EconWeight = pINI->ReadDouble("Dossier.Scoreboard", "EconWeight", cfg.EconWeight);
 	cfg.TerritoryWeight = pINI->ReadDouble("Dossier.Scoreboard", "TerritoryWeight", cfg.TerritoryWeight);
 	Debug::Log("[DossierExt] [Dossier.Scoreboard]: Losing.Below=%.2f Desperate.Below=%.2f Winning.Above=%.2f "
-		"Hysteresis=%.2f weights(army/econ/territory)=%.2f/%.2f/%.2f\n",
-		cfg.LosingBelow, cfg.DesperateBelow, cfg.WinningAbove, cfg.Hysteresis,
+		"Hysteresis=%.2f StandingSmoothing=%.2f weights(army/econ/territory)=%.2f/%.2f/%.2f\n",
+		cfg.LosingBelow, cfg.DesperateBelow, cfg.WinningAbove, cfg.Hysteresis, cfg.StandingSmoothing,
 		cfg.ArmyWeight, cfg.EconWeight, cfg.TerritoryWeight);
 
 	// ─── DossierExt.* per-difficulty keys (intuitive section names) ─────

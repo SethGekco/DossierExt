@@ -38,6 +38,7 @@ struct DossierConfig
 	double DesperateBelow = 0.5;             // -> DESPERATE
 	double WinningAbove = 1.3;               // -> WINNING
 	double Hysteresis = 0.1;                 // band to climb back out of a tier
+	double StandingSmoothing = 0.3;          // EMA alpha: momentum vs responsiveness
 	// Standing formula weights (open question #3: start equal thirds)
 	double ArmyWeight = 1.0;
 	double EconWeight = 1.0;
