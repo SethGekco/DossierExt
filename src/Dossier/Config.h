@@ -67,6 +67,11 @@ struct DossierConfig
 	int SpatialTopN = 12;                    // hottest buckets kept per grid
 	int RushWindow = 9000;                   // frames: "early" attacks = a rush
 
+	// Phase 2.2 — does a strategy TRANSFER across maps/countries?
+	bool TransferReport = true;
+	double TransferThreshold = 0.30;         // below = portable habit
+	double MapSimilarThreshold = 0.25;       // below = maps play alike
+
 	// Phase 1 — [Dossier.Scoreboard] (tier thresholds; DESIGN §5c)
 	double LosingBelow = 0.8;                // standing ratio -> LOSING
 	double DesperateBelow = 0.5;             // -> DESPERATE

@@ -170,6 +170,7 @@ bool Identity::EnsureRoster()
 			std::string const mapKey = MapKeyFor(pHouse);
 			auto& prof = Profile::Open(name.c_str(), pHouse->ArrayIndex, pHouse->get_ID());
 			prof.CurrentMapKey = mapKey;
+			prof.CurrentMapStem = MapStem();
 			Debug::Log("[DossierExt] profiling '%s' as %s on %s (spawn=%d)\n",
 				name.c_str(), pHouse->get_ID(), mapKey.c_str(), pHouse->GetSpawnPosition());
 

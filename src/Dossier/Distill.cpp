@@ -2,6 +2,7 @@
 #include "Dossier/Profile.h"
 #include "Dossier/Observatory.h"
 #include "Dossier/Config.h"
+#include "Dossier/Survey.h"
 
 #include <BuildingTypeClass.h>
 #include <Utilities/Debug.h>
@@ -125,6 +126,83 @@ namespace
 	}
 }
 
+namespace
+{
+	// How alike are two maps? Normalised differences on size, spawn count and
+	// starting ore — enough to say "that 4-spawn ore-rich map plays like this
+	// one" without pretending to understand terrain.
+	double MapDistance(MapFingerprint const& a, MapFingerprint const& b)
+	{
+		auto rel = [](double x, double y)
+		{
+			double const denom = std::max(1.0, std::max(std::fabs(x), std::fabs(y)));
+			return std::min(1.0, std::fabs(x - y) / denom);
+		};
+		double const size = 0.5 * (rel(a.Width, b.Width) + rel(a.Height, b.Height));
+		double const spawns = rel(a.Spawns, b.Spawns);
+		double const ore = rel(static_cast<double>(a.OreTotal), static_cast<double>(b.OreTotal));
+		return 0.4 * size + 0.3 * spawns + 0.3 * ore;
+	}
+}
+
+void Distill::ReportTransfer(PlayerProfile const& profile)
+{
+	auto const& cfg = DossierConfig::Instance;
+	if (!cfg.TransferReport)
+		return;
+	if (profile.Overall.HabitSamples < 1)
+		return;
+
+	std::string why;
+
+	// Per-country: does the playstyle shift with the country? (Rex's original
+	// premise — now measured instead of assumed.)
+	for (auto const& [country, rec] : profile.Countries)
+	{
+		if (rec.HabitSamples < 1)
+			continue;
+		double const d = Divergence(rec, profile.Overall, why);
+		Debug::Log("[DossierExt] transfer %s country=%s games=%d divergence=%.2f [%s] -> %s\n",
+			profile.Name.c_str(), country.c_str(), rec.HabitSamples, d, why.c_str(),
+			d < cfg.TransferThreshold
+			? "PORTABLE (plays the same as always)"
+			: "COUNTRY-SPECIFIC (different game on this country)");
+	}
+
+	// Per-map: is the strategy map-invariant, or tailored to this map?
+	for (auto const& [mapKey, rec] : profile.Maps)
+	{
+		if (rec.HabitSamples < 1)
+			continue;
+		double const d = Divergence(rec, profile.Overall, why);
+		Debug::Log("[DossierExt] transfer %s map=%s games=%d divergence=%.2f [%s] -> %s\n",
+			profile.Name.c_str(), mapKey.c_str(), rec.HabitSamples, d, why.c_str(),
+			d < cfg.TransferThreshold
+			? "PORTABLE (same plan he runs everywhere — predicts him on UNPLAYED maps)"
+			: "MAP-SPECIFIC (tailored here; use this map's record, not the general one)");
+	}
+
+	// Nearest already-played map by fingerprint: what an unplayed map inherits.
+	auto const cur = profile.MapInfo.find(profile.CurrentMapStem);
+	if (cur == profile.MapInfo.end() || !cur->second.Valid())
+		return;
+	std::string bestKey;
+	double bestDist = 1e9;
+	for (auto const& [stem, fp] : profile.MapInfo)
+	{
+		if (stem == profile.CurrentMapStem || !fp.Valid())
+			continue;
+		double const d = MapDistance(cur->second, fp);
+		if (d < bestDist) { bestDist = d; bestKey = stem; }
+	}
+	if (!bestKey.empty())
+		Debug::Log("[DossierExt] map similarity: %s is closest to %s (distance=%.2f) -> %s\n",
+			profile.CurrentMapStem.c_str(), bestKey.c_str(), bestDist,
+			bestDist < cfg.MapSimilarThreshold
+			? "SIMILAR: habits learned there apply here"
+			: "different map character; lean on the Overall record instead");
+}
+
 void Distill::FoldHabits(PlayerProfile& profile, HouseObs& obs)
 {
 	auto const& cfg = DossierConfig::Instance;
@@ -134,6 +212,15 @@ void Distill::FoldHabits(PlayerProfile& profile, HouseObs& obs)
 	std::vector<std::string> opening;
 	for (auto const& [frame, typeIdx] : obs.BuildOrder)
 		opening.push_back(std::to_string(frame) + ":" + StructName(typeIdx));
+
+	// Remember what this map looks like, so a future unplayed map can inherit
+	// from the closest thing this player has actually been seen on.
+	if (!profile.CurrentMapStem.empty())
+	{
+		auto const& fp = Survey::Fingerprint();
+		if (fp.Valid())
+			profile.MapInfo[profile.CurrentMapStem] = fp;
+	}
 
 	if (cfg.RecOverall)
 		FoldInto(profile.Overall, obs, w, opening);

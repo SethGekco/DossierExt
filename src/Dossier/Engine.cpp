@@ -58,6 +58,9 @@ namespace
 					Distill::FoldHabits(*pGlobal, *pObs);
 					Profile::Save(*pGlobal, won ? "Won" : "Lost");
 					Distill::ReportIdentityTrust(profile);
+					// Transfer read is most meaningful on the install-wide
+					// record: it spans every name, country and map played.
+					Distill::ReportTransfer(*pGlobal);
 				}
 			}
 		}

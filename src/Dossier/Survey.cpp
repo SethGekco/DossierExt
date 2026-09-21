@@ -2,6 +2,7 @@
 #include "Dossier/Observatory.h"
 #include "Dossier/Config.h"
 #include "Dossier/Production.h"
+#include "Dossier/Profile.h"
 
 #include <HouseClass.h>
 #include <TechnoClass.h>
@@ -18,6 +19,7 @@
 namespace
 {
 	int g_lastSurveyFrame = -1;
+	MapFingerprint g_fingerprint;
 
 	struct OreCell { CellStruct Loc; int Value; };
 
@@ -45,6 +47,12 @@ namespace
 void Survey::Reset()
 {
 	g_lastSurveyFrame = -1;
+	g_fingerprint = MapFingerprint{};
+}
+
+MapFingerprint const& Survey::Fingerprint()
+{
+	return g_fingerprint;
 }
 
 void Survey::MaybeRun()
@@ -170,6 +178,26 @@ void Survey::MaybeRun()
 	if (cfg.DebugTicks)
 		Debug::Log("[DossierExt] survey f%d: %u ore cells, %lld total ore value on map\n",
 			frame, ore.size(), oreTotal);
+
+	// Map fingerprint, taken once (starting ore is the meaningful measure, so
+	// the first sweep wins — later sweeps see a depleted map).
+	if (!g_fingerprint.Valid())
+	{
+		auto const& b = MapClass::Instance.MapCoordBounds;
+		g_fingerprint.Width = b.Right - b.Left + 1;
+		g_fingerprint.Height = b.Bottom - b.Top + 1;
+		g_fingerprint.OreTotal = oreTotal;
+		int spawns = 0;
+		for (int i = 0; i < HouseClass::Array.Count; ++i)
+		{
+			auto const pH = HouseClass::Array.GetItem(i);
+			if (pH && !pH->IsObserver() && !pH->IsNeutral() && pH->GetSpawnPosition() >= 0)
+				++spawns;
+		}
+		g_fingerprint.Spawns = spawns;
+		Debug::Log("[DossierExt] map fingerprint: %dx%d cells, %d spawns, %lld starting ore\n",
+			g_fingerprint.Width, g_fingerprint.Height, g_fingerprint.Spawns, g_fingerprint.OreTotal);
+	}
 
 	// Structure build-order diff runs off the fresh snapshot.
 	Production::DiffAfterSurvey();

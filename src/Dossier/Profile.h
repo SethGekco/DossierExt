@@ -28,6 +28,17 @@ struct HabitRecord
 };
 using CountryRecord = HabitRecord; // back-compat alias
 
+// What a map IS, independent of any player — so habits learned on one map can
+// be transferred to an unplayed map that looks similar.
+struct MapFingerprint
+{
+	int Width = 0;
+	int Height = 0;
+	int Spawns = 0;
+	long long OreTotal = 0;
+	bool Valid() const { return Width > 0 && Height > 0; }
+};
+
 // Where this player does things on a given map+spawn. Keys are "bx,by" bucket
 // coordinates (SpatialBucket cells per bucket) so the INI stays readable.
 struct SpatialRecord
@@ -48,11 +59,13 @@ struct PlayerProfile
 	std::map<std::string, HabitRecord> Countries;     // key = country ID
 	std::map<std::string, HabitRecord> Maps;          // key = map, or "map#spawnN"
 	std::map<std::string, SpatialRecord> Spatial;     // key = same as Maps
+	std::map<std::string, MapFingerprint> MapInfo;    // key = bare map stem
 
 	// This game's session state (not persisted as-is).
 	int HouseIndex = -1;
 	std::string CurrentCountry;
 	std::string CurrentMapKey;  // "MapName" or "MapName#spawnN"
+	std::string CurrentMapStem; // bare map name (fingerprint key)
 	bool OutcomeRecorded = false;
 	bool Dirty = false;
 	bool IsGlobal = false;      // the install-wide "_AllHumans" record

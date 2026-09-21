@@ -96,6 +96,9 @@ void DossierConfig::EnsureParsed()
 	cfg.SpatialBucket = pINI->ReadInteger("Dossier.Records", "SpatialBucket", cfg.SpatialBucket);
 	cfg.SpatialTopN = pINI->ReadInteger("Dossier.Records", "SpatialTopN", cfg.SpatialTopN);
 	cfg.RushWindow = pINI->ReadInteger("Dossier.Records", "RushWindow", cfg.RushWindow);
+	cfg.TransferReport = pINI->ReadBool("Dossier.Records", "TransferReport", cfg.TransferReport);
+	cfg.TransferThreshold = pINI->ReadDouble("Dossier.Records", "TransferThreshold", cfg.TransferThreshold);
+	cfg.MapSimilarThreshold = pINI->ReadDouble("Dossier.Records", "MapSimilarThreshold", cfg.MapSimilarThreshold);
 	Debug::Log("[DossierExt] [Dossier.Records]: Overall=%d PerCountry=%d PerMap=%d PerSpawn=%d "
 		"Spatial=%d SpatialBucket=%d SpatialTopN=%d RushWindow=%d\n",
 		cfg.RecOverall, cfg.RecPerCountry, cfg.RecPerMap, cfg.RecPerSpawn,

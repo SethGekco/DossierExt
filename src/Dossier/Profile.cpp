@@ -89,6 +89,18 @@ namespace
 			sub = d2 == std::string::npos ? "" : rest.substr(d2 + 1);
 		}
 
+		if (scope == "MapInfo")
+		{
+			if (name.empty())
+				return;
+			auto& fp = profile.MapInfo[name];
+			if (!std::strcmp(key, "Width")) fp.Width = std::atoi(value);
+			else if (!std::strcmp(key, "Height")) fp.Height = std::atoi(value);
+			else if (!std::strcmp(key, "Spawns")) fp.Spawns = std::atoi(value);
+			else if (!std::strcmp(key, "OreTotal")) fp.OreTotal = std::atoll(value);
+			return;
+		}
+
 		if (scope == "Spatial")
 		{
 			if (name.empty())
@@ -187,6 +199,8 @@ void Profile::OpenGlobal(const char* const countryId, const char* const mapKey)
 	g_global.IsGlobal = true;
 	g_global.CurrentCountry = countryId;
 	g_global.CurrentMapKey = mapKey;
+	// Fingerprints key off the bare stem (everything before "#spawnN").
+	g_global.CurrentMapStem = std::string(mapKey).substr(0, std::string(mapKey).find('#'));
 	LoadFromDisk(g_global);
 	++g_global.GamesSeen;
 	++g_global.Countries[g_global.CurrentCountry].Played;
@@ -274,6 +288,13 @@ bool Profile::Save(PlayerProfile& profile, const char* const lastOutcome)
 		writeHabit("Country." + country, rec);
 	for (auto const& [mapKey, rec] : profile.Maps)
 		writeHabit("Map." + mapKey, rec);
+	for (auto const& [stem, fp] : profile.MapInfo)
+	{
+		if (!fp.Valid())
+			continue;
+		std::fprintf(f, "\n[MapInfo.%s]\nWidth=%d\nHeight=%d\nSpawns=%d\nOreTotal=%lld\n",
+			stem.c_str(), fp.Width, fp.Height, fp.Spawns, fp.OreTotal);
+	}
 	for (auto const& [mapKey, sp] : profile.Spatial)
 	{
 		std::string const prefix = "Spatial." + mapKey;
