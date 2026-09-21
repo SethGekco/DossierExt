@@ -43,10 +43,24 @@ namespace
 			profile.CurrentCountry.c_str(), won ? "WON" : "LOST",
 			pHouse->IsWinner, pHouse->IsLoser, pHouse->Defeated);
 
-		// Phase 2: fold this game's habits into the persistent per-country
-		// dossier before the final save.
+		// Phase 2: fold this game's habits into the persistent dossier before
+		// the final save — the named record, and (for the local human) the
+		// install-wide record that renaming can't escape.
 		if (auto const pObs = Observatory::Find(pHouse->ArrayIndex))
+		{
 			Distill::FoldHabits(profile, *pObs);
+			if (auto const pGlobal = Profile::Global())
+			{
+				if (pHouse == HouseClass::CurrentPlayer)
+				{
+					if (won) { ++pGlobal->GamesWon; ++pGlobal->Countries[pGlobal->CurrentCountry].Won; }
+					else { ++pGlobal->GamesLost; ++pGlobal->Countries[pGlobal->CurrentCountry].Lost; }
+					Distill::FoldHabits(*pGlobal, *pObs);
+					Profile::Save(*pGlobal, won ? "Won" : "Lost");
+					Distill::ReportIdentityTrust(profile);
+				}
+			}
+		}
 		Profile::Save(profile, won ? "Won" : "Lost");
 	}
 }

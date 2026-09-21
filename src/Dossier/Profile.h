@@ -8,7 +8,10 @@
 // games (DESIGN.md §2b/§3). Phase 2 distils each game's Observatory data into
 // recency-weighted per-country habits: opening fingerprint, unit-mix, economy,
 // aggression. Local file only; it does not feed sim decisions yet.
-struct CountryRecord
+// One aggregate of habits. The SAME record type serves every scope: the
+// cross-country "Overall" layer, each [Country.X], and each [Map.Y] /
+// [Map.Y.SpawnN] — so a habit can be asked at whatever grain has evidence.
+struct HabitRecord
 {
 	int Played = 0;
 	int Won = 0;
@@ -23,6 +26,16 @@ struct CountryRecord
 	std::map<std::string, double> UnitMix; // folded composition fractions
 	std::vector<std::string> Opening;      // "frame:TypeID", most recent game
 };
+using CountryRecord = HabitRecord; // back-compat alias
+
+// Where this player does things on a given map+spawn. Keys are "bx,by" bucket
+// coordinates (SpatialBucket cells per bucket) so the INI stays readable.
+struct SpatialRecord
+{
+	std::map<std::string, int> AttackGrid; // where they kill enemies (all game)
+	std::map<std::string, int> RushGrid;   // ...within RushWindow = their rush path
+	std::map<std::string, int> BuildGrid;  // time-weighted: where they hold/build
+};
 
 struct PlayerProfile
 {
@@ -31,13 +44,18 @@ struct PlayerProfile
 	int GamesSeen = 0;
 	int GamesWon = 0;
 	int GamesLost = 0;
-	std::map<std::string, CountryRecord> Countries; // key = country ID (e.g. "Americans")
+	HabitRecord Overall;                              // cross-country layer
+	std::map<std::string, HabitRecord> Countries;     // key = country ID
+	std::map<std::string, HabitRecord> Maps;          // key = map, or "map#spawnN"
+	std::map<std::string, SpatialRecord> Spatial;     // key = same as Maps
 
 	// This game's session state (not persisted as-is).
 	int HouseIndex = -1;
 	std::string CurrentCountry;
+	std::string CurrentMapKey;  // "MapName" or "MapName#spawnN"
 	bool OutcomeRecorded = false;
 	bool Dirty = false;
+	bool IsGlobal = false;      // the install-wide "_AllHumans" record
 };
 
 namespace Profile
@@ -49,6 +67,11 @@ namespace Profile
 	PlayerProfile& Open(const char* rawName, int houseIndex, const char* countryId);
 
 	PlayerProfile* FindByHouse(int houseIndex);
+
+	// The install-wide human record: fed by every LOCAL human game whatever
+	// name was typed, so renaming can't shake the dossier (DESIGN §3a).
+	PlayerProfile* Global();
+	void OpenGlobal(const char* countryId, const char* mapKey);
 
 	// Write one profile to disk (creates ProfileDir if needed). Logs the path
 	// and result; returns success.

@@ -6,8 +6,11 @@
 #include <BuildingTypeClass.h>
 #include <Utilities/Debug.h>
 
+#include <algorithm>
+#include <cmath>
 #include <set>
 #include <string>
+#include <vector>
 
 namespace
 {
@@ -25,59 +28,161 @@ namespace
 		auto const pType = BuildingTypeClass::Array.GetItem(typeIndex);
 		return pType ? pType->get_ID() : "?";
 	}
+
+	// Fold this game's habits into one record, at any scope.
+	void FoldInto(HabitRecord& rec, HouseObs const& obs, double const w,
+		std::vector<std::string> const& opening)
+	{
+		bool const first = (rec.HabitSamples == 0);
+
+		double const incomeSample = obs.IncomeSamples > 0
+			? static_cast<double>(obs.SumIncome) / obs.IncomeSamples : 0.0;
+		Fold(rec.AvgIncome, incomeSample, first, w);
+		Fold(rec.AvgPeakArmy, static_cast<double>(obs.PeakArmy), first, w);
+		Fold(rec.AvgMaxFloat, static_cast<double>(obs.MaxFloat), first, w);
+		if (obs.FirstKillFrame >= 0)
+			Fold(rec.AvgFirstKill, static_cast<double>(obs.FirstKillFrame),
+				rec.AvgFirstKill < 0, w);
+
+		if (obs.UnitMixSamples > 0)
+		{
+			std::set<std::string> keys;
+			for (auto const& [id, _] : rec.UnitMix) keys.insert(id);
+			for (auto const& [id, _] : obs.UnitMix) keys.insert(id);
+			for (auto const& id : keys)
+			{
+				auto const it = obs.UnitMix.find(id);
+				double const sample = it != obs.UnitMix.end()
+					? static_cast<double>(it->second) / obs.UnitMixSamples : 0.0;
+				double cur = rec.UnitMix.count(id) ? rec.UnitMix.at(id) : 0.0;
+				Fold(cur, sample, first, w);
+				if (cur < 0.001)
+					rec.UnitMix.erase(id); // prune negligible entries
+				else
+					rec.UnitMix[id] = cur;
+			}
+		}
+
+		rec.Opening = opening;
+		++rec.HabitSamples;
+	}
+
+	// Merge a game's grid into a stored grid, then keep only the hottest
+	// SpatialTopN buckets so a profile can't grow without bound.
+	void FoldGrid(std::map<std::string, int>& stored,
+		std::map<std::string, int> const& fresh, int const topN)
+	{
+		for (auto const& [bucket, weight] : fresh)
+			stored[bucket] += weight;
+		if (topN <= 0 || static_cast<int>(stored.size()) <= topN)
+			return;
+		std::vector<std::pair<std::string, int>> all(stored.begin(), stored.end());
+		std::sort(all.begin(), all.end(), [](auto const& a, auto const& b)
+			{ return a.second != b.second ? a.second > b.second : a.first < b.first; });
+		all.resize(topN);
+		stored.clear();
+		for (auto const& [bucket, weight] : all)
+			stored[bucket] = weight;
+	}
+
+	// How different are two habit vectors? L1 distance over unit-mix (the
+	// richest signal, range 0..2 -> halved to 0..1) blended with normalised
+	// differences on aggression timing and cash-hoarding. Deterministic and
+	// explainable — the log line names the biggest contributor.
+	double Divergence(HabitRecord const& a, HabitRecord const& b, std::string& why)
+	{
+		std::set<std::string> keys;
+		for (auto const& [id, _] : a.UnitMix) keys.insert(id);
+		for (auto const& [id, _] : b.UnitMix) keys.insert(id);
+		double mixL1 = 0.0;
+		std::string worstId;
+		double worstGap = 0.0;
+		for (auto const& id : keys)
+		{
+			double const va = a.UnitMix.count(id) ? a.UnitMix.at(id) : 0.0;
+			double const vb = b.UnitMix.count(id) ? b.UnitMix.at(id) : 0.0;
+			double const gap = std::fabs(va - vb);
+			mixL1 += gap;
+			if (gap > worstGap) { worstGap = gap; worstId = id; }
+		}
+		double const mix = std::min(1.0, mixL1 * 0.5);
+
+		auto relDiff = [](double const x, double const y)
+		{
+			double const denom = std::max(1.0, std::max(std::fabs(x), std::fabs(y)));
+			return std::min(1.0, std::fabs(x - y) / denom);
+		};
+		double const aggro = (a.AvgFirstKill >= 0 && b.AvgFirstKill >= 0)
+			? relDiff(a.AvgFirstKill, b.AvgFirstKill) : 0.0;
+		double const cash = relDiff(a.AvgMaxFloat, b.AvgMaxFloat);
+
+		double const score = 0.6 * mix + 0.2 * aggro + 0.2 * cash;
+		char buf[192];
+		std::snprintf(buf, sizeof(buf), "mix=%.2f (biggest gap %s %.2f) aggro=%.2f cash=%.2f",
+			mix, worstId.empty() ? "-" : worstId.c_str(), worstGap, aggro, cash);
+		why = buf;
+		return score;
+	}
 }
 
 void Distill::FoldHabits(PlayerProfile& profile, HouseObs& obs)
 {
 	auto const& cfg = DossierConfig::Instance;
 	double const w = cfg.RecencyWeight;
-	auto& rec = profile.Countries[profile.CurrentCountry];
 
-	bool const first = (rec.HabitSamples == 0);
+	// The opening fingerprint is shared by every scope this game folds into.
+	std::vector<std::string> opening;
+	for (auto const& [frame, typeIdx] : obs.BuildOrder)
+		opening.push_back(std::to_string(frame) + ":" + StructName(typeIdx));
 
-	double const incomeSample = obs.IncomeSamples > 0
-		? static_cast<double>(obs.SumIncome) / obs.IncomeSamples : 0.0;
-	Fold(rec.AvgIncome, incomeSample, first, w);
-	Fold(rec.AvgPeakArmy, static_cast<double>(obs.PeakArmy), first, w);
-	Fold(rec.AvgMaxFloat, static_cast<double>(obs.MaxFloat), first, w);
+	if (cfg.RecOverall)
+		FoldInto(profile.Overall, obs, w, opening);
+	if (cfg.RecPerCountry)
+		FoldInto(profile.Countries[profile.CurrentCountry], obs, w, opening);
+	if (cfg.RecPerMap && !profile.CurrentMapKey.empty())
+		FoldInto(profile.Maps[profile.CurrentMapKey], obs, w, opening);
 
-	// Aggression only folds when the house actually fought this game, and uses
-	// its own first-sample flag (AvgFirstKill starts at -1 = never measured).
-	if (obs.FirstKillFrame >= 0)
-		Fold(rec.AvgFirstKill, static_cast<double>(obs.FirstKillFrame),
-			rec.AvgFirstKill < 0, w);
-
-	// Unit-mix: EMA over the union of previously-known and this-game types, so
-	// abandoned units decay toward zero and new favourites rise.
-	if (obs.UnitMixSamples > 0)
+	if (cfg.RecSpatial && !profile.CurrentMapKey.empty())
 	{
-		std::set<std::string> keys;
-		for (auto const& [id, _] : rec.UnitMix) keys.insert(id);
-		for (auto const& [id, _] : obs.UnitMix) keys.insert(id);
-		for (auto const& id : keys)
-		{
-			auto const it = obs.UnitMix.find(id);
-			double const sample = it != obs.UnitMix.end()
-				? static_cast<double>(it->second) / obs.UnitMixSamples : 0.0;
-			double cur = rec.UnitMix.count(id) ? rec.UnitMix[id] : 0.0;
-			Fold(cur, sample, first, w);
-			if (cur < 0.001)
-				rec.UnitMix.erase(id); // prune negligible entries
-			else
-				rec.UnitMix[id] = cur;
-		}
+		auto& sp = profile.Spatial[profile.CurrentMapKey];
+		FoldGrid(sp.AttackGrid, obs.AttackGrid, cfg.SpatialTopN);
+		FoldGrid(sp.RushGrid, obs.RushGrid, cfg.SpatialTopN);
+		FoldGrid(sp.BuildGrid, obs.BuildGrid, cfg.SpatialTopN);
+		Debug::Log("[DossierExt] spatial %s @ %s: attack=%u rush=%u build=%u buckets kept\n",
+			profile.Name.c_str(), profile.CurrentMapKey.c_str(),
+			sp.AttackGrid.size(), sp.RushGrid.size(), sp.BuildGrid.size());
 	}
 
-	// Opening fingerprint: keep the most recent game's build order verbatim.
-	rec.Opening.clear();
-	for (auto const& [frame, typeIdx] : obs.BuildOrder)
-		rec.Opening.push_back(std::to_string(frame) + ":" + StructName(typeIdx));
-
-	++rec.HabitSamples;
-
-	Debug::Log("[DossierExt] distilled %s as %s: games=%d avgIncome=%.0f avgPeakArmy=%.0f "
+	auto const& rec = profile.Countries.count(profile.CurrentCountry)
+		? profile.Countries[profile.CurrentCountry] : profile.Overall;
+	Debug::Log("[DossierExt] distilled %s as %s on %s: games=%d avgIncome=%.0f avgPeakArmy=%.0f "
 		"avgMaxFloat=%.0f avgFirstKill=%.0f unitTypes=%u openingEvents=%u\n",
-		profile.Name.c_str(), profile.CurrentCountry.c_str(), rec.HabitSamples,
+		profile.Name.c_str(), profile.CurrentCountry.c_str(),
+		profile.CurrentMapKey.c_str(), rec.HabitSamples,
 		rec.AvgIncome, rec.AvgPeakArmy, rec.AvgMaxFloat, rec.AvgFirstKill,
 		rec.UnitMix.size(), rec.Opening.size());
+}
+
+void Distill::ReportIdentityTrust(PlayerProfile const& named)
+{
+	auto const& cfg = DossierConfig::Instance;
+	if (cfg.IdentityMode == "NameOnly")
+		return;
+	auto const pGlobal = Profile::Global();
+	if (!pGlobal)
+		return;
+
+	// Would this NAME be trusted on its own, or does the AI fall back to the
+	// install-wide record? Phase 2 only reports it; Phase 3+ consults it.
+	std::string why;
+	double const d = Divergence(named.Overall, pGlobal->Overall, why);
+	bool const enoughGames = named.Overall.HabitSamples >= cfg.TrustNameAfter;
+	bool const distinct = d >= cfg.DivergenceThreshold;
+	bool const standalone = (cfg.IdentityMode != "GlobalOnly") && enoughGames && distinct;
+
+	Debug::Log("[DossierExt] identity '%s': games=%d/%d divergence=%.2f/%.2f [%s] -> %s\n",
+		named.Name.c_str(), named.Overall.HabitSamples, cfg.TrustNameAfter,
+		d, cfg.DivergenceThreshold, why.c_str(),
+		standalone ? "TRUST THIS NAME (distinct persona)"
+		: "USE INSTALL-WIDE RECORD (a new name buys no fresh start)");
 }

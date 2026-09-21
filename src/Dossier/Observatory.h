@@ -68,6 +68,11 @@ struct HouseObs
 	int FirstKillFrame = -1;       // frame this house scored its first kill
 	int KillsDealt = 0;
 	int LossesTaken = 0;
+
+	// Spatial habits — "where do they do things", bucketed "bx,by".
+	std::map<std::string, int> AttackGrid; // where this house kills enemies
+	std::map<std::string, int> RushGrid;   // ...inside RushWindow = the rush path
+	std::map<std::string, int> BuildGrid;  // time-weighted building presence
 };
 
 namespace Observatory
@@ -75,4 +80,7 @@ namespace Observatory
 	void Reset();
 	HouseObs& Get(int houseIndex);
 	HouseObs* Find(int houseIndex);
+
+	// "bx,by" key for a cell, at the configured SpatialBucket resolution.
+	std::string BucketKey(int cellX, int cellY);
 }

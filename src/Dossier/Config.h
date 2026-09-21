@@ -38,6 +38,35 @@ struct DossierConfig
 	int OpeningMaxEvents = 40;               // build-order events kept for the opening
 	double RecencyWeight = 0.4;              // EMA weight of THIS game vs history
 
+	// Phase 2.1 — [Dossier.Identity]: names are costumes, not identities.
+	// Blend = consult the install-wide human record until a NAME earns its own
+	// standing (enough games AND a measurably different habit vector).
+	std::string IdentityMode = "Blend";      // Blend | NameOnly | GlobalOnly
+	std::string GlobalProfileName = "_AllHumans";
+	int TrustNameAfter = 3;                  // games before a name can stand alone
+	double DivergenceThreshold = 0.35;       // habit distance = "distinct persona"
+	bool MPNameTrust = true;                 // MP lobby names are real people
+
+	// MP desync policy (DESIGN §7). Every client simulates every AI, so if a
+	// LOCAL profile file ever influenced the sim the clients would diverge
+	// instantly. Therefore with 2+ humans: keep RECORDING (writing a file has
+	// no sim effect, and every client independently observes the same game, so
+	// everyone's install learns) but never let profile data reach a decision.
+	// Observatory + Scoreboard read synced sim state and stay fully live.
+	bool RecordInMultiplayer = true;         // learn from MP games
+	bool ActOnProfilesInMultiplayer = false; // NEVER default-on: desync risk
+
+	// Phase 2.1 — [Dossier.Records]: every layer on by default, each toggleable
+	// (modders watching profile file size can switch layers off).
+	bool RecOverall = true;                  // cross-country "this human" layer
+	bool RecPerCountry = true;
+	bool RecPerMap = true;                   // per-map records
+	bool RecPerSpawn = true;                 // split map records by spawn point
+	bool RecSpatial = true;                  // attack / rush / build heatmaps
+	int SpatialBucket = 8;                   // cells per heatmap bucket
+	int SpatialTopN = 12;                    // hottest buckets kept per grid
+	int RushWindow = 9000;                   // frames: "early" attacks = a rush
+
 	// Phase 1 — [Dossier.Scoreboard] (tier thresholds; DESIGN §5c)
 	double LosingBelow = 0.8;                // standing ratio -> LOSING
 	double DesperateBelow = 0.5;             // -> DESPERATE

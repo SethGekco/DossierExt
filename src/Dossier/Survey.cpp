@@ -101,6 +101,14 @@ void Survey::MaybeRun()
 				if (pBld->Type->Capturable)
 					++obs.TechBuildingsOwned;
 			}
+			// WHERE they hold ground: time-weighted building presence (a
+			// structure standing for many surveys counts many times, so the
+			// hot buckets are the places they really commit to).
+			if (cfg.RecSpatial)
+			{
+				auto const cell = pTechno->GetMapCoords();
+				++obs.BuildGrid[Observatory::BucketKey(cell.X, cell.Y)];
+			}
 		}
 		else
 		{

@@ -23,6 +23,8 @@ DEFINE_HOOK(0x702D40, DossierExt_RegisterDestruction_Aggression, 0x5)
 
 	int const frame = Unsorted::CurrentFrame;
 
+	auto const& cfg = DossierConfig::Instance;
+
 	if (pKiller && pKiller->Owner)
 	{
 		auto& k = Observatory::Get(pKiller->Owner->ArrayIndex);
@@ -30,9 +32,22 @@ DEFINE_HOOK(0x702D40, DossierExt_RegisterDestruction_Aggression, 0x5)
 		if (k.FirstKillFrame < 0)
 		{
 			k.FirstKillFrame = frame;
-			if (DossierConfig::Instance.DebugTicks)
+			if (cfg.DebugTicks)
 				Debug::Log("[DossierExt] first blood: %s#%d at f%d\n",
 					pKiller->Owner->get_ID(), pKiller->Owner->ArrayIndex, frame);
+		}
+
+		// WHERE they fight: bucket the victim's cell. Only count kills on
+		// someone they're not allied with, so friendly-fire//civilian noise
+		// doesn't paint a false attack route.
+		if (cfg.RecSpatial && pVictim && pVictim->Owner
+			&& !pKiller->Owner->IsAlliedWith(pVictim->Owner))
+		{
+			auto const cell = pVictim->GetMapCoords();
+			auto const key = Observatory::BucketKey(cell.X, cell.Y);
+			++k.AttackGrid[key];
+			if (frame <= cfg.RushWindow)
+				++k.RushGrid[key]; // early aggression = their rush path
 		}
 	}
 

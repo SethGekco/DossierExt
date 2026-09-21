@@ -9,4 +9,9 @@ struct HouseObs;
 namespace Distill
 {
 	void FoldHabits(PlayerProfile& profile, HouseObs& obs);
+
+	// Log whether this NAME has earned standalone trust or whether the AI
+	// would fall back to the install-wide record (so renaming buys nothing).
+	// Phase 2 reports only; Phase 3+ consults the same test.
+	void ReportIdentityTrust(PlayerProfile const& named);
 }

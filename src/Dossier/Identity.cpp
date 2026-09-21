@@ -3,6 +3,7 @@
 #include "Dossier/Profile.h"
 
 #include <HouseClass.h>
+#include <ScenarioClass.h>
 #include <Utilities/Debug.h>
 
 #include <cstdio>
@@ -50,6 +51,49 @@ namespace
 			}
 		}
 		std::fclose(f);
+	}
+
+	// Map identity: the scenario file name without path/extension, so
+	// "Powder Keg.map" and a rehost of it share a record.
+	std::string MapStem()
+	{
+		auto const pScen = ScenarioClass::Instance();
+		if (!pScen)
+			return "UnknownMap";
+		std::string s = pScen->FileName;
+		auto const slash = s.find_last_of("\\/");
+		if (slash != std::string::npos)
+			s = s.substr(slash + 1);
+		auto const dot = s.find_last_of('.');
+		if (dot != std::string::npos)
+			s = s.substr(0, dot);
+		if (s.empty())
+			return "UnknownMap";
+		// Keep it INI-section-safe AND dot-free: the profile parser splits
+		// section names on '.', so a "map.v2.map" stem must not keep its dot.
+		for (auto& c : s)
+		{
+			bool const ok = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')
+				|| (c >= '0' && c <= '9') || c == '_' || c == '-';
+			if (!ok)
+				c = '_';
+		}
+		return s;
+	}
+
+	// Per-map record key, optionally split by spawn point — "the player's
+	// favourite things to do from THIS position on THIS map".
+	std::string MapKeyFor(HouseClass* const pHouse)
+	{
+		auto const& cfg = DossierConfig::Instance;
+		std::string key = MapStem();
+		if (cfg.RecPerSpawn)
+		{
+			int const spawn = pHouse->GetSpawnPosition();
+			if (spawn >= 0)
+				key += "#spawn" + std::to_string(spawn);
+		}
+		return key;
 	}
 
 	// Pick the best available identity for a human house.
@@ -122,7 +166,17 @@ bool Identity::EnsureRoster()
 		if (profiled)
 		{
 			std::string const name = ResolveName(pHouse);
-			Profile::Open(name.c_str(), pHouse->ArrayIndex, pHouse->get_ID());
+			std::string const mapKey = MapKeyFor(pHouse);
+			auto& prof = Profile::Open(name.c_str(), pHouse->ArrayIndex, pHouse->get_ID());
+			prof.CurrentMapKey = mapKey;
+			Debug::Log("[DossierExt] profiling '%s' as %s on %s (spawn=%d)\n",
+				name.c_str(), pHouse->get_ID(), mapKey.c_str(), pHouse->GetSpawnPosition());
+
+			// The install-wide record follows the LOCAL human only — remote
+			// lobby names are other people and must not pollute it.
+			if (pHouse == HouseClass::CurrentPlayer
+				&& DossierConfig::Instance.IdentityMode != "NameOnly")
+				Profile::OpenGlobal(pHouse->get_ID(), mapKey.c_str());
 		}
 	}
 

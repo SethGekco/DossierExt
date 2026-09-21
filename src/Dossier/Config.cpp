@@ -68,6 +68,39 @@ void DossierConfig::EnsureParsed()
 		cfg.Enabled, cfg.DebugTicks, cfg.CheckpointInterval, cfg.ProfileDir.c_str(),
 		cfg.EconWindow, cfg.EconSmoothing, cfg.SurveyPeriod, cfg.OreReachRadius, cfg.ScoreboardPeriod);
 
+	// ─── [Dossier.Identity] — name-vs-install identity policy ───────────
+	pINI->ReadString("Dossier.Identity", "Mode", cfg.IdentityMode.c_str(), buf, sizeof(buf));
+	cfg.IdentityMode = buf;
+	pINI->ReadString("Dossier.Identity", "GlobalProfile", cfg.GlobalProfileName.c_str(), buf, sizeof(buf));
+	cfg.GlobalProfileName = buf;
+	cfg.TrustNameAfter = pINI->ReadInteger("Dossier.Identity", "TrustNameAfter", cfg.TrustNameAfter);
+	cfg.DivergenceThreshold = pINI->ReadDouble("Dossier.Identity", "DivergenceThreshold", cfg.DivergenceThreshold);
+	cfg.MPNameTrust = pINI->ReadBool("Dossier.Identity", "MPNameTrust", cfg.MPNameTrust);
+	cfg.RecordInMultiplayer = pINI->ReadBool("Dossier.Identity", "RecordInMultiplayer", cfg.RecordInMultiplayer);
+	cfg.ActOnProfilesInMultiplayer = pINI->ReadBool("Dossier.Identity", "ActOnProfilesInMultiplayer", cfg.ActOnProfilesInMultiplayer);
+	if (cfg.ActOnProfilesInMultiplayer)
+		Debug::Log("[DossierExt] WARNING: ActOnProfilesInMultiplayer=yes — local profiles would "
+			"influence the sim with 2+ humans. Clients hold DIFFERENT profiles, so this WILL desync. "
+			"Only safe if every client is guaranteed identical dossier data.\n");
+	Debug::Log("[DossierExt] [Dossier.Identity]: Mode=%s GlobalProfile=%s TrustNameAfter=%d "
+		"DivergenceThreshold=%.2f MPNameTrust=%d\n",
+		cfg.IdentityMode.c_str(), cfg.GlobalProfileName.c_str(), cfg.TrustNameAfter,
+		cfg.DivergenceThreshold, cfg.MPNameTrust);
+
+	// ─── [Dossier.Records] — which layers to record ─────────────────────
+	cfg.RecOverall = pINI->ReadBool("Dossier.Records", "Overall", cfg.RecOverall);
+	cfg.RecPerCountry = pINI->ReadBool("Dossier.Records", "PerCountry", cfg.RecPerCountry);
+	cfg.RecPerMap = pINI->ReadBool("Dossier.Records", "PerMap", cfg.RecPerMap);
+	cfg.RecPerSpawn = pINI->ReadBool("Dossier.Records", "PerSpawn", cfg.RecPerSpawn);
+	cfg.RecSpatial = pINI->ReadBool("Dossier.Records", "Spatial", cfg.RecSpatial);
+	cfg.SpatialBucket = pINI->ReadInteger("Dossier.Records", "SpatialBucket", cfg.SpatialBucket);
+	cfg.SpatialTopN = pINI->ReadInteger("Dossier.Records", "SpatialTopN", cfg.SpatialTopN);
+	cfg.RushWindow = pINI->ReadInteger("Dossier.Records", "RushWindow", cfg.RushWindow);
+	Debug::Log("[DossierExt] [Dossier.Records]: Overall=%d PerCountry=%d PerMap=%d PerSpawn=%d "
+		"Spatial=%d SpatialBucket=%d SpatialTopN=%d RushWindow=%d\n",
+		cfg.RecOverall, cfg.RecPerCountry, cfg.RecPerMap, cfg.RecPerSpawn,
+		cfg.RecSpatial, cfg.SpatialBucket, cfg.SpatialTopN, cfg.RushWindow);
+
 	// ─── [Dossier.Scoreboard] — tier thresholds + standing weights ──────
 	cfg.LosingBelow = pINI->ReadDouble("Dossier.Scoreboard", "Losing.Below", cfg.LosingBelow);
 	cfg.DesperateBelow = pINI->ReadDouble("Dossier.Scoreboard", "Desperate.Below", cfg.DesperateBelow);
