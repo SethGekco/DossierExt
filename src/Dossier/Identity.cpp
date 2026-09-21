@@ -57,7 +57,8 @@ namespace
 	// "Powder Keg.map" and a rehost of it share a record.
 	std::string MapStem()
 	{
-		auto const pScen = ScenarioClass::Instance();
+		// DEFINE_REFERENCE gives a ScenarioClass* lvalue, not a function.
+		auto const pScen = ScenarioClass::Instance;
 		if (!pScen)
 			return "UnknownMap";
 		std::string s = pScen->FileName;
