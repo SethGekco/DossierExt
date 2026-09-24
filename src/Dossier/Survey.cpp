@@ -78,6 +78,7 @@ void Survey::MaybeRun()
 		obs.BuildingValue = 0;
 		obs.TechBuildingsOwned = 0;
 		obs.TechListed = obs.TechCivilian = obs.TechCaptured = 0;
+		obs.TechDetail.clear();
 		obs.OreNearest = -1;
 		obs.OreReachable = 0;
 		obs.PrevStructCounts = obs.StructCounts;
@@ -130,7 +131,19 @@ void Survey::MaybeRun()
 				else if (civilian) ++obs.TechCivilian;
 				else if (taken) ++obs.TechCaptured;
 				if (listed || civilian || taken)
+				{
 					++obs.TechBuildingsOwned;
+					// Name every structure that qualified, and which rule
+					// fired, so a surprising total can be explained instead of
+					// guessed at.
+					if (cfg.DebugTicks && obs.TechDetail.size() < 400 && pId)
+					{
+						if (!obs.TechDetail.empty())
+							obs.TechDetail += ",";
+						obs.TechDetail += pId;
+						obs.TechDetail += listed ? "(listed)" : civilian ? "(civ)" : "(taken)";
+					}
+				}
 			}
 			// WHERE they hold ground: time-weighted building presence (a
 			// structure standing for many surveys counts many times, so the
@@ -192,11 +205,12 @@ void Survey::MaybeRun()
 		obs.OreNearest = (nearest < 1e9) ? static_cast<int>(nearest) : -1;
 		obs.SurveyInit = true;
 
-		Debug::Log("[DossierExt] survey %s#%d f%d: army=%lld bld=%lld techBldgs=%d(listed=%d civ=%d taken=%d) oreNearest=%dcell oreReach=%lld(r%d) structs=%u\n",
+		Debug::Log("[DossierExt] survey %s#%d f%d: army=%lld bld=%lld techBldgs=%d(listed=%d civ=%d taken=%d) oreNearest=%dcell oreReach=%lld(r%d) structs=%u%s%s\n",
 			pHouse->get_ID(), i, frame, obs.ArmyValue, obs.BuildingValue,
 			obs.TechBuildingsOwned, obs.TechListed, obs.TechCivilian, obs.TechCaptured,
 			obs.OreNearest, obs.OreReachable, reach,
-			obs.StructCounts.size());
+			obs.StructCounts.size(),
+			obs.TechDetail.empty() ? "" : " tech=", obs.TechDetail.c_str());
 	}
 
 	if (cfg.DebugTicks)

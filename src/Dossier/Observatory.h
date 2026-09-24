@@ -39,6 +39,7 @@ struct HouseObs
 	int TechListed = 0;            // ...declared in [AI] NeutralTechBuildings
 	int TechCivilian = 0;          // ...unlisted but civilian-shaped
 	int TechCaptured = 0;          // ...taken from someone (fan-map ConYards)
+	std::string TechDetail;        // DebugTicks: which IDs were counted, and why
 
 	// ── Structure build-order tape (Production.cpp) ─────────────────────
 	bool StructInit = false;
