@@ -15,6 +15,29 @@ namespace
 	bool g_resolved = false;
 	int g_humans = 0;
 	std::string g_localName;   // spawn.ini [Settings] Name — the local human
+	std::string g_uiMapName;   // spawn.ini [Settings] UIMapName — the REAL map
+
+	// Make a string safe for an INI section name AND free of '.' (the profile
+	// parser splits section names on dots).
+	void SanitizeKey(std::string& s)
+	{
+		for (auto& c : s)
+		{
+			bool const ok = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')
+				|| (c >= '0' && c <= '9') || c == '_' || c == '-';
+			if (!ok)
+				c = '_';
+		}
+		// Collapse runs of '_' and trim them off the ends, so "[8] Powder Keg"
+		// reads back as "Powder_Keg".
+		std::string out;
+		for (char const c : s)
+			if (c != '_' || (!out.empty() && out.back() != '_'))
+				out += c;
+		while (!out.empty() && out.back() == '_') out.pop_back();
+		while (!out.empty() && out.front() == '_') out.erase(out.begin());
+		s = out;
+	}
 
 	// The launcher rewrites spawn.ini with the real player names at launch; the
 	// house PlainName is only the literal "<human player>" placeholder in
@@ -24,6 +47,7 @@ namespace
 	void LoadSpawnName()
 	{
 		g_localName.clear();
+		g_uiMapName.clear();
 		FILE* const f = std::fopen("spawn.ini", "r");
 		if (!f)
 			return;
@@ -40,46 +64,62 @@ namespace
 			}
 			if (!inSettings)
 				continue;
-			if (std::strncmp(s, "Name=", 5) == 0)
+			auto trimmedValue = [](char* v)
 			{
-				char* v = s + 5;
 				char* e = v + std::strlen(v);
 				while (e > v && (e[-1] == '\n' || e[-1] == '\r' || e[-1] == ' ')) --e;
 				*e = '\0';
-				g_localName = v;
+				return v;
+			};
+			if (std::strncmp(s, "Name=", 5) == 0)
+				g_localName = trimmedValue(s + 5);
+			else if (std::strncmp(s, "UIMapName=", 10) == 0)
+				g_uiMapName = trimmedValue(s + 10);
+			if (!g_localName.empty() && !g_uiMapName.empty())
 				break;
-			}
 		}
 		std::fclose(f);
 	}
 
-	// Map identity: the scenario file name without path/extension, so
-	// "Powder Keg.map" and a rehost of it share a record.
+	// Map identity. TRAP: in skirmish/CnCNet the launcher copies the chosen map
+	// to spawnmap.ini, so ScenarioClass::FileName is the literal "spawnmap.ini"
+	// for EVERY game — using it collapses every map into one record. The real
+	// name is spawn.ini's UIMapName ("[8] Powder Keg"). Campaign/other scenarios
+	// do carry a real FileName, so prefer that when it isn't the spawn stub.
 	std::string MapStem()
 	{
+		std::string fromFile;
 		// DEFINE_REFERENCE gives a ScenarioClass* lvalue, not a function.
-		auto const pScen = ScenarioClass::Instance;
-		if (!pScen)
-			return "UnknownMap";
-		std::string s = pScen->FileName;
-		auto const slash = s.find_last_of("\\/");
-		if (slash != std::string::npos)
-			s = s.substr(slash + 1);
-		auto const dot = s.find_last_of('.');
-		if (dot != std::string::npos)
-			s = s.substr(0, dot);
-		if (s.empty())
-			return "UnknownMap";
-		// Keep it INI-section-safe AND dot-free: the profile parser splits
-		// section names on '.', so a "map.v2.map" stem must not keep its dot.
-		for (auto& c : s)
+		if (auto const pScen = ScenarioClass::Instance)
 		{
-			bool const ok = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')
-				|| (c >= '0' && c <= '9') || c == '_' || c == '-';
-			if (!ok)
-				c = '_';
+			fromFile = pScen->FileName;
+			auto const slash = fromFile.find_last_of("\\/");
+			if (slash != std::string::npos)
+				fromFile = fromFile.substr(slash + 1);
+			auto const dot = fromFile.find_last_of('.');
+			if (dot != std::string::npos)
+				fromFile = fromFile.substr(0, dot);
+			SanitizeKey(fromFile);
 		}
-		return s;
+
+		bool const isSpawnStub = fromFile.empty()
+			|| _stricmp(fromFile.c_str(), "spawnmap") == 0;
+
+		if (isSpawnStub && !g_uiMapName.empty())
+		{
+			// Drop a leading "[8] " player-count tag, then sanitize.
+			std::string ui = g_uiMapName;
+			if (!ui.empty() && ui.front() == '[')
+			{
+				auto const close = ui.find(']');
+				if (close != std::string::npos)
+					ui = ui.substr(close + 1);
+			}
+			SanitizeKey(ui);
+			if (!ui.empty())
+				return ui;
+		}
+		return fromFile.empty() ? "UnknownMap" : fromFile;
 	}
 
 	// Per-map record key, optionally split by spawn point — "the player's
@@ -136,8 +176,9 @@ bool Identity::EnsureRoster()
 	auto const& cfg = DossierConfig::Instance;
 	g_humans = 0;
 	LoadSpawnName();
-	Debug::Log("[DossierExt] spawn.ini local name = '%s'\n",
-		g_localName.empty() ? "(none)" : g_localName.c_str());
+	Debug::Log("[DossierExt] spawn.ini local name = '%s', UIMapName = '%s' -> map key '%s'\n",
+		g_localName.empty() ? "(none)" : g_localName.c_str(),
+		g_uiMapName.empty() ? "(none)" : g_uiMapName.c_str(), MapStem().c_str());
 
 	for (int i = 0; i < HouseClass::Array.Count; ++i)
 	{
