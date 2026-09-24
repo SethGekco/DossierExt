@@ -77,6 +77,7 @@ void Survey::MaybeRun()
 		obs.ArmyValue = 0;
 		obs.BuildingValue = 0;
 		obs.TechBuildingsOwned = 0;
+		obs.TechListed = obs.TechCivilian = obs.TechCaptured = 0;
 		obs.OreNearest = -1;
 		obs.OreReachable = 0;
 		obs.PrevStructCounts = obs.StructCounts;
@@ -106,13 +107,26 @@ void Survey::MaybeRun()
 			if (pBld->Type)
 			{
 				++obs.StructCounts[pBld->Type->ArrayIndex];
-				// A neutral TECH structure (derrick, airport, hospital) is one
-				// nobody can build but anyone can own: TechLevel=-1 AND
-				// Capturable. Capturable ALONE is useless here — vanilla sets
-				// it on ordinary buildings too (GAPILE/GAREFN/GAPOWR all have
-				// Capturable=true), which previously made this count the
-				// owner's whole base.
-				if (pBld->Type->Capturable && pBld->Type->TechLevel < 0)
+
+				// What counts as a tech building is MAP DESIGN, not a rules
+				// technicality. Three signals, any one qualifies:
+				//  1. declared in [AI] NeutralTechBuildings (+ our extras)
+				//  2. civilian-shaped: buildable by nobody, ownable by anyone
+				//     (TechLevel<0 && Capturable) — catches unlisted ones
+				//  3. it was TAKEN — a fan map may offer a capturable ConYard
+				//     or any faction structure; if this house didn't build it,
+				//     it's a captured asset whatever its type.
+				// NB Capturable ALONE means nothing: vanilla sets it on
+				// ordinary buildings (GAPILE/GAREFN/GAPOWR), which is what
+				// previously made this count the owner's entire base.
+				auto const pId = pBld->Type->get_ID();
+				bool const listed = pId && cfg.NeutralTechBuildings.count(pId) > 0;
+				bool const civilian = pBld->Type->Capturable && pBld->Type->TechLevel < 0;
+				bool const taken = cfg.CapturedCountsAsTech && pBld->HasBeenCaptured;
+				if (listed) ++obs.TechListed;
+				else if (civilian) ++obs.TechCivilian;
+				else if (taken) ++obs.TechCaptured;
+				if (listed || civilian || taken)
 					++obs.TechBuildingsOwned;
 			}
 			// WHERE they hold ground: time-weighted building presence (a
@@ -175,9 +189,10 @@ void Survey::MaybeRun()
 		obs.OreNearest = (nearest < 1e9) ? static_cast<int>(nearest) : -1;
 		obs.SurveyInit = true;
 
-		Debug::Log("[DossierExt] survey %s#%d f%d: army=%lld bld=%lld techBldgs=%d oreNearest=%dcell oreReach=%lld(r%d) structs=%u\n",
+		Debug::Log("[DossierExt] survey %s#%d f%d: army=%lld bld=%lld techBldgs=%d(listed=%d civ=%d taken=%d) oreNearest=%dcell oreReach=%lld(r%d) structs=%u\n",
 			pHouse->get_ID(), i, frame, obs.ArmyValue, obs.BuildingValue,
-			obs.TechBuildingsOwned, obs.OreNearest, obs.OreReachable, reach,
+			obs.TechBuildingsOwned, obs.TechListed, obs.TechCivilian, obs.TechCaptured,
+			obs.OreNearest, obs.OreReachable, reach,
 			obs.StructCounts.size());
 	}
 

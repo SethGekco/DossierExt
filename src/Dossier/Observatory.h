@@ -35,7 +35,10 @@ struct HouseObs
 	long long BuildingValue = 0;   // Σ cost of owned buildings
 	int OreNearest = -1;           // cells to nearest ore (-1 = none found)
 	long long OreReachable = 0;    // ore value within OreReachRadius of base
-	int TechBuildingsOwned = 0;    // capturable tech structures under control
+	int TechBuildingsOwned = 0;    // neutral/captured assets under control
+	int TechListed = 0;            // ...declared in [AI] NeutralTechBuildings
+	int TechCivilian = 0;          // ...unlisted but civilian-shaped
+	int TechCaptured = 0;          // ...taken from someone (fan-map ConYards)
 
 	// ── Structure build-order tape (Production.cpp) ─────────────────────
 	bool StructInit = false;

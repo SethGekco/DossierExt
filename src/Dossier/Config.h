@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include <string>
 
 // Parsed [Dossier.*] config + the per-difficulty DossierExt.* keys from the
@@ -87,6 +88,16 @@ struct DossierConfig
 	// derricks — ore-only territory reads 0 for everyone there and the
 	// dimension goes dead. Counting tech buildings keeps it meaningful.
 	int TechBuildingValue = 2000;
+
+	// What counts as a "tech building" is MAP DESIGN, not a technicality
+	// (Rex, 2026-09-23): Westwood maps only ever offer civilian structures,
+	// but fan maps happily place capturable ConYards and the like. So three
+	// signals are accepted, any one of which qualifies — see Survey.cpp.
+	// Declared list = rulesmd [AI] NeutralTechBuildings, plus our additions
+	// (the stock list is complete except CASLAB).
+	std::set<std::string> NeutralTechBuildings;
+	std::string ExtraTechBuildings = "CASLAB";
+	bool CapturedCountsAsTech = true;   // anything TAKEN counts, whatever it is
 
 	// DossierExt.* keys, indexed by AIDifficulty (0=Hard, 1=Normal, 2=Easy —
 	// the engine's inverted enum; resolution helpers hide the confusion).

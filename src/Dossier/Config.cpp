@@ -17,6 +17,27 @@ DossierConfig DossierConfig::Instance;
 
 namespace
 {
+	// Split a comma-separated INI value into trimmed, non-empty tokens.
+	void SplitInto(const char* const value, std::set<std::string>& out)
+	{
+		std::string token;
+		for (const char* p = value; ; ++p)
+		{
+			if (*p == ',' || *p == '\0')
+			{
+				while (!token.empty() && token.back() == ' ')
+					token.pop_back();
+				if (!token.empty())
+					out.insert(token);
+				token.clear();
+				if (*p == '\0')
+					break;
+			}
+			else if (*p != ' ' || !token.empty())
+				token += *p;
+		}
+	}
+
 	// AIDifficulty is inverted: 0=Hard, 1=Normal, 2=Easy.
 	const char* const kIntuitive[3] = { "Difficult", "Normal", "Easy" };
 	const char* const kEngine[3] = { "Easy", "Normal", "Difficult" };
@@ -114,6 +135,23 @@ void DossierConfig::EnsureParsed()
 	cfg.EconWeight = pINI->ReadDouble("Dossier.Scoreboard", "EconWeight", cfg.EconWeight);
 	cfg.TerritoryWeight = pINI->ReadDouble("Dossier.Scoreboard", "TerritoryWeight", cfg.TerritoryWeight);
 	cfg.TechBuildingValue = pINI->ReadInteger("Dossier.Scoreboard", "TechBuildingValue", cfg.TechBuildingValue);
+
+	// The modder already declares the neutral tech structures for the AI —
+	// reuse that list rather than inventing our own heuristic.
+	char listBuf[1024] = { 0 };
+	pINI->ReadString("AI", "NeutralTechBuildings", "", listBuf, sizeof(listBuf));
+	cfg.NeutralTechBuildings.clear();
+	SplitInto(listBuf, cfg.NeutralTechBuildings);
+	int const fromAI = static_cast<int>(cfg.NeutralTechBuildings.size());
+	char extraBuf[512] = { 0 };
+	pINI->ReadString("Dossier.General", "ExtraTechBuildings", cfg.ExtraTechBuildings.c_str(),
+		extraBuf, sizeof(extraBuf));
+	cfg.ExtraTechBuildings = extraBuf;
+	SplitInto(extraBuf, cfg.NeutralTechBuildings);
+	cfg.CapturedCountsAsTech = pINI->ReadBool("Dossier.General", "CapturedCountsAsTech", cfg.CapturedCountsAsTech);
+	Debug::Log("[DossierExt] tech buildings: %d from [AI] NeutralTechBuildings + extras '%s' "
+		"= %u declared; CapturedCountsAsTech=%d\n",
+		fromAI, extraBuf, cfg.NeutralTechBuildings.size(), cfg.CapturedCountsAsTech);
 	Debug::Log("[DossierExt] [Dossier.Scoreboard]: Losing.Below=%.2f Desperate.Below=%.2f Winning.Above=%.2f "
 		"Hysteresis=%.2f StandingSmoothing=%.2f weights(army/econ/territory)=%.2f/%.2f/%.2f\n",
 		cfg.LosingBelow, cfg.DesperateBelow, cfg.WinningAbove, cfg.Hysteresis, cfg.StandingSmoothing,
