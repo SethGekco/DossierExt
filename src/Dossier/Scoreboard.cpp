@@ -19,6 +19,16 @@ namespace
 			&& !pOwner->IsAlliedWith(pOther);
 	}
 
+	// Ground worth holding: reachable ore PLUS captured tech buildings. Ore
+	// alone goes dead on derrick-economy maps (verified: Powder Keg, nearest
+	// ore 100+ cells away, 11 derricks held, steady income).
+	double Territory(HouseObs const& obs)
+	{
+		return static_cast<double>(obs.OreReachable)
+			+ static_cast<double>(obs.TechBuildingsOwned)
+			* DossierConfig::Instance.TechBuildingValue;
+	}
+
 	// Component ratio self/enemyAvg, clamped so a nearly-dead enemy doesn't
 	// blow the standing up to infinity.
 	double Ratio(double const self, double const enemyAvg)
@@ -90,7 +100,7 @@ void Scoreboard::Evaluate(HouseClass* const pHouse)
 			continue;
 		eArmy += static_cast<double>(pObs->ArmyValue);
 		eEcon += pObs->SmoothedIncome;
-		eTerr += static_cast<double>(pObs->OreReachable);
+		eTerr += Territory(*pObs);
 		++enemies;
 	}
 
@@ -105,7 +115,7 @@ void Scoreboard::Evaluate(HouseClass* const pHouse)
 		eArmy /= enemies; eEcon /= enemies; eTerr /= enemies;
 		double const rArmy = Ratio(static_cast<double>(pSelf->ArmyValue), eArmy);
 		double const rEcon = Ratio(pSelf->SmoothedIncome, eEcon);
-		double const rTerr = Ratio(static_cast<double>(pSelf->OreReachable), eTerr);
+		double const rTerr = Ratio(Territory(*pSelf), eTerr);
 		double const wsum = cfg.ArmyWeight + cfg.EconWeight + cfg.TerritoryWeight;
 		raw = wsum > 0
 			? (cfg.ArmyWeight * rArmy + cfg.EconWeight * rEcon + cfg.TerritoryWeight * rTerr) / wsum
@@ -129,7 +139,7 @@ void Scoreboard::Evaluate(HouseClass* const pHouse)
 	if (firstEval || pSelf->CurrentTier != prevTier)
 		Debug::Log("[DossierExt] SCOREBOARD %s#%d f%d: %s -> %s (standing=%.2f raw=%.2f; army=%lld econ=%d terr=%lld vs %d enemy)\n",
 			pHouse->get_ID(), idx, frame, TierName(prevTier), TierName(pSelf->CurrentTier),
-			s, raw, pSelf->ArmyValue, static_cast<int>(pSelf->SmoothedIncome), pSelf->OreReachable, enemies);
+			s, raw, pSelf->ArmyValue, static_cast<int>(pSelf->SmoothedIncome), static_cast<long long>(Territory(*pSelf)), enemies);
 	else if (cfg.DebugTicks)
 		Debug::Log("[DossierExt] scoreboard %s#%d f%d: %s (standing=%.2f raw=%.2f)\n",
 			pHouse->get_ID(), idx, frame, TierName(pSelf->CurrentTier), s, raw);

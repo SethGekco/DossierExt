@@ -82,6 +82,11 @@ struct DossierConfig
 	double ArmyWeight = 1.0;
 	double EconWeight = 1.0;
 	double TerritoryWeight = 1.0;
+	// Worth of one captured tech building as "territory". Some maps (Powder
+	// Keg, verified in-game) have almost no reachable ore and run entirely on
+	// derricks — ore-only territory reads 0 for everyone there and the
+	// dimension goes dead. Counting tech buildings keeps it meaningful.
+	int TechBuildingValue = 2000;
 
 	// DossierExt.* keys, indexed by AIDifficulty (0=Hard, 1=Normal, 2=Easy —
 	// the engine's inverted enum; resolution helpers hide the confusion).

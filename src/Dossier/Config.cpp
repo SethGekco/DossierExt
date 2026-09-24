@@ -113,6 +113,7 @@ void DossierConfig::EnsureParsed()
 	cfg.ArmyWeight = pINI->ReadDouble("Dossier.Scoreboard", "ArmyWeight", cfg.ArmyWeight);
 	cfg.EconWeight = pINI->ReadDouble("Dossier.Scoreboard", "EconWeight", cfg.EconWeight);
 	cfg.TerritoryWeight = pINI->ReadDouble("Dossier.Scoreboard", "TerritoryWeight", cfg.TerritoryWeight);
+	cfg.TechBuildingValue = pINI->ReadInteger("Dossier.Scoreboard", "TechBuildingValue", cfg.TechBuildingValue);
 	Debug::Log("[DossierExt] [Dossier.Scoreboard]: Losing.Below=%.2f Desperate.Below=%.2f Winning.Above=%.2f "
 		"Hysteresis=%.2f StandingSmoothing=%.2f weights(army/econ/territory)=%.2f/%.2f/%.2f\n",
 		cfg.LosingBelow, cfg.DesperateBelow, cfg.WinningAbove, cfg.Hysteresis, cfg.StandingSmoothing,
