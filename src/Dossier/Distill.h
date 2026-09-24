@@ -8,7 +8,10 @@ struct HouseObs;
 // games count more). Called once at game end, before the profile is saved.
 namespace Distill
 {
-	void FoldHabits(PlayerProfile& profile, HouseObs& obs);
+	// outcome: 1 = won, -1 = lost, 0 = no verdict. Played/Won/Lost are counted
+	// per scope here (i.e. per COMPLETED game), so they line up with
+	// HabitSamples; [Meta] GamesSeen separately counts times loaded.
+	void FoldHabits(PlayerProfile& profile, HouseObs& obs, int outcome);
 
 	// Log whether this NAME has earned standalone trust or whether the AI
 	// would fall back to the install-wide record (so renaming buys nothing).

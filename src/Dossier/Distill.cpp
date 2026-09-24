@@ -32,9 +32,12 @@ namespace
 
 	// Fold this game's habits into one record, at any scope.
 	void FoldInto(HabitRecord& rec, HouseObs const& obs, double const w,
-		std::vector<std::string> const& opening)
+		std::vector<std::string> const& opening, int const outcome)
 	{
 		bool const first = (rec.HabitSamples == 0);
+		++rec.Played;
+		if (outcome > 0) ++rec.Won;
+		else if (outcome < 0) ++rec.Lost;
 
 		double const incomeSample = obs.IncomeSamples > 0
 			? static_cast<double>(obs.SumIncome) / obs.IncomeSamples : 0.0;
@@ -203,7 +206,7 @@ void Distill::ReportTransfer(PlayerProfile const& profile)
 			: "different map character; lean on the Overall record instead");
 }
 
-void Distill::FoldHabits(PlayerProfile& profile, HouseObs& obs)
+void Distill::FoldHabits(PlayerProfile& profile, HouseObs& obs, int const outcome)
 {
 	auto const& cfg = DossierConfig::Instance;
 	double const w = cfg.RecencyWeight;
@@ -223,11 +226,11 @@ void Distill::FoldHabits(PlayerProfile& profile, HouseObs& obs)
 	}
 
 	if (cfg.RecOverall)
-		FoldInto(profile.Overall, obs, w, opening);
+		FoldInto(profile.Overall, obs, w, opening, outcome);
 	if (cfg.RecPerCountry)
-		FoldInto(profile.Countries[profile.CurrentCountry], obs, w, opening);
+		FoldInto(profile.Countries[profile.CurrentCountry], obs, w, opening, outcome);
 	if (cfg.RecPerMap && !profile.CurrentMapKey.empty())
-		FoldInto(profile.Maps[profile.CurrentMapKey], obs, w, opening);
+		FoldInto(profile.Maps[profile.CurrentMapKey], obs, w, opening, outcome);
 
 	if (cfg.RecSpatial && !profile.CurrentMapKey.empty())
 	{

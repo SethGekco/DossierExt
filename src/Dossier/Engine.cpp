@@ -27,17 +27,9 @@ namespace
 			return;
 
 		profile.OutcomeRecorded = true;
-		auto& rec = profile.Countries[profile.CurrentCountry];
-		if (won)
-		{
-			++profile.GamesWon;
-			++rec.Won;
-		}
-		else
-		{
-			++profile.GamesLost;
-			++rec.Lost;
-		}
+		// Per-scope Played/Won/Lost are counted inside the fold; [Meta] keeps
+		// the profile-wide totals.
+		if (won) ++profile.GamesWon; else ++profile.GamesLost;
 		Debug::Log("[DossierExt] OUTCOME %s#%d '%s' as %s: %s (IsWinner=%d IsLoser=%d Defeated=%d)\n",
 			pHouse->get_ID(), pHouse->ArrayIndex, profile.RawName.c_str(),
 			profile.CurrentCountry.c_str(), won ? "WON" : "LOST",
@@ -46,16 +38,16 @@ namespace
 		// Phase 2: fold this game's habits into the persistent dossier before
 		// the final save — the named record, and (for the local human) the
 		// install-wide record that renaming can't escape.
+		int const outcome = won ? 1 : -1;
 		if (auto const pObs = Observatory::Find(pHouse->ArrayIndex))
 		{
-			Distill::FoldHabits(profile, *pObs);
+			Distill::FoldHabits(profile, *pObs, outcome);
 			if (auto const pGlobal = Profile::Global())
 			{
 				if (pHouse == HouseClass::CurrentPlayer)
 				{
-					if (won) { ++pGlobal->GamesWon; ++pGlobal->Countries[pGlobal->CurrentCountry].Won; }
-					else { ++pGlobal->GamesLost; ++pGlobal->Countries[pGlobal->CurrentCountry].Lost; }
-					Distill::FoldHabits(*pGlobal, *pObs);
+					if (won) ++pGlobal->GamesWon; else ++pGlobal->GamesLost;
+					Distill::FoldHabits(*pGlobal, *pObs, outcome);
 					Profile::Save(*pGlobal, won ? "Won" : "Lost");
 					Distill::ReportIdentityTrust(profile);
 					// Transfer read is most meaningful on the install-wide

@@ -203,7 +203,7 @@ void Profile::OpenGlobal(const char* const countryId, const char* const mapKey)
 	g_global.CurrentMapStem = std::string(mapKey).substr(0, std::string(mapKey).find('#'));
 	LoadFromDisk(g_global);
 	++g_global.GamesSeen;
-	++g_global.Countries[g_global.CurrentCountry].Played;
+	// Per-scope Played is counted at fold time (completed games only).
 	g_global.Dirty = true;
 	Save(g_global, "InProgress");
 }
@@ -220,7 +220,7 @@ PlayerProfile& Profile::Open(const char* const rawName, int const houseIndex, co
 	// Seeing the player at all counts, and writing immediately proves the IO
 	// path at game START rather than discovering a broken path at game end.
 	++profile.GamesSeen;
-	++profile.Countries[profile.CurrentCountry].Played;
+	// Per-scope Played is counted at fold time (completed games only)...
 	profile.Dirty = true;
 	Save(profile, "InProgress");
 	return profile;
