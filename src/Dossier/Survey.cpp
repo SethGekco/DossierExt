@@ -111,8 +111,10 @@ void Survey::MaybeRun()
 				// What counts as a tech building is MAP DESIGN, not a rules
 				// technicality. Three signals, any one qualifies:
 				//  1. declared in [AI] NeutralTechBuildings (+ our extras)
-				//  2. civilian-shaped: buildable by nobody, ownable by anyone
-				//     (TechLevel<0 && Capturable) — catches unlisted ones
+				//  2. (opt-in) civilian-shaped: TechLevel<0 && Capturable.
+				//     OFF by default — it false-positives on the Construction
+				//     Yard (GACNST is TechLevel=-1 Capturable=true, since
+				//     ConYards deploy rather than build), verified in-game.
 				//  3. it was TAKEN — a fan map may offer a capturable ConYard
 				//     or any faction structure; if this house didn't build it,
 				//     it's a captured asset whatever its type.
@@ -121,7 +123,8 @@ void Survey::MaybeRun()
 				// previously made this count the owner's entire base.
 				auto const pId = pBld->Type->get_ID();
 				bool const listed = pId && cfg.NeutralTechBuildings.count(pId) > 0;
-				bool const civilian = pBld->Type->Capturable && pBld->Type->TechLevel < 0;
+				bool const civilian = cfg.CivilianHeuristic
+					&& pBld->Type->Capturable && pBld->Type->TechLevel < 0;
 				bool const taken = cfg.CapturedCountsAsTech && pBld->HasBeenCaptured;
 				if (listed) ++obs.TechListed;
 				else if (civilian) ++obs.TechCivilian;

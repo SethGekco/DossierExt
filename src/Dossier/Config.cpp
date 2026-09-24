@@ -149,9 +149,11 @@ void DossierConfig::EnsureParsed()
 	cfg.ExtraTechBuildings = extraBuf;
 	SplitInto(extraBuf, cfg.NeutralTechBuildings);
 	cfg.CapturedCountsAsTech = pINI->ReadBool("Dossier.General", "CapturedCountsAsTech", cfg.CapturedCountsAsTech);
+	cfg.CivilianHeuristic = pINI->ReadBool("Dossier.General", "CivilianHeuristic", cfg.CivilianHeuristic);
 	Debug::Log("[DossierExt] tech buildings: %d from [AI] NeutralTechBuildings + extras '%s' "
-		"= %u declared; CapturedCountsAsTech=%d\n",
-		fromAI, extraBuf, cfg.NeutralTechBuildings.size(), cfg.CapturedCountsAsTech);
+		"= %u declared; CapturedCountsAsTech=%d CivilianHeuristic=%d\n",
+		fromAI, extraBuf, cfg.NeutralTechBuildings.size(), cfg.CapturedCountsAsTech,
+		cfg.CivilianHeuristic);
 	Debug::Log("[DossierExt] [Dossier.Scoreboard]: Losing.Below=%.2f Desperate.Below=%.2f Winning.Above=%.2f "
 		"Hysteresis=%.2f StandingSmoothing=%.2f weights(army/econ/territory)=%.2f/%.2f/%.2f\n",
 		cfg.LosingBelow, cfg.DesperateBelow, cfg.WinningAbove, cfg.Hysteresis, cfg.StandingSmoothing,

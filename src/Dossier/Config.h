@@ -98,6 +98,13 @@ struct DossierConfig
 	std::set<std::string> NeutralTechBuildings;
 	std::string ExtraTechBuildings = "CASLAB";
 	bool CapturedCountsAsTech = true;   // anything TAKEN counts, whatever it is
+	// TechLevel<0 && Capturable looked like a neat "civilian" test but it
+	// FALSE-POSITIVES on the Construction Yard (GACNST is TechLevel=-1
+	// Capturable=true, because ConYards deploy rather than build) — verified
+	// in-game, it silently counted every player's own ConYard. The declared
+	// list is authoritative; this stays available for mods that don't declare
+	// one, but defaults OFF.
+	bool CivilianHeuristic = false;
 
 	// DossierExt.* keys, indexed by AIDifficulty (0=Hard, 1=Normal, 2=Easy —
 	// the engine's inverted enum; resolution helpers hide the confusion).
