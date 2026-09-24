@@ -106,7 +106,13 @@ void Survey::MaybeRun()
 			if (pBld->Type)
 			{
 				++obs.StructCounts[pBld->Type->ArrayIndex];
-				if (pBld->Type->Capturable)
+				// A neutral TECH structure (derrick, airport, hospital) is one
+				// nobody can build but anyone can own: TechLevel=-1 AND
+				// Capturable. Capturable ALONE is useless here — vanilla sets
+				// it on ordinary buildings too (GAPILE/GAREFN/GAPOWR all have
+				// Capturable=true), which previously made this count the
+				// owner's whole base.
+				if (pBld->Type->Capturable && pBld->Type->TechLevel < 0)
 					++obs.TechBuildingsOwned;
 			}
 			// WHERE they hold ground: time-weighted building presence (a
