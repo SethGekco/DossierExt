@@ -41,6 +41,7 @@
     <ClCompile Include="src\Dossier\KillTracker.cpp" />
     <ClCompile Include="src\Dossier\Distill.cpp" />
     <ClCompile Include="src\Dossier\Signs.cpp" />
+    <ClCompile Include="src\Dossier\MatchSettings.cpp" />
   </ItemGroup>
 
   <!-- Header files -->
@@ -58,6 +59,7 @@
     <ClInclude Include="src\Dossier\KillTracker.h" />
     <ClInclude Include="src\Dossier\Distill.h" />
     <ClInclude Include="src\Dossier\Signs.h" />
+    <ClInclude Include="src\Dossier\MatchSettings.h" />
   </ItemGroup>
 
   <PropertyGroup Label="Globals">

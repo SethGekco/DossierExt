@@ -69,6 +69,10 @@ struct PlayerProfile
 	std::map<std::string, HabitRecord> Maps;          // key = map, or "map#spawnN"
 	std::map<std::string, SpatialRecord> Spatial;     // key = same as Maps
 	std::map<std::string, MapFingerprint> MapInfo;    // key = bare map stem
+	// Habits per starting-condition, keyed "Dim-Value" (e.g. "Cash-High").
+	// Per dimension-VALUE rather than per combination, so every match feeds
+	// every dimension and influence becomes measurable in a few games.
+	std::map<std::string, HabitRecord> Settings;
 
 	// This game's session state (not persisted as-is).
 	int HouseIndex = -1;

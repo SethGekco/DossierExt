@@ -4,6 +4,7 @@
 #include "Dossier/Config.h"
 #include "Dossier/Survey.h"
 #include "Dossier/Signs.h"
+#include "Dossier/MatchSettings.h"
 
 #include <BuildingTypeClass.h>
 #include <Utilities/Debug.h>
@@ -222,6 +223,62 @@ void Distill::ReportTransfer(PlayerProfile const& profile)
 			: "different map character; lean on the Overall record instead");
 }
 
+void Distill::ReportSettingInfluence(PlayerProfile const& profile)
+{
+	auto const& cfg = DossierConfig::Instance;
+	if (!cfg.SettingsReport || profile.Settings.empty())
+		return;
+
+	// Group the "Dim-Value" records back under their dimension.
+	std::map<std::string, std::vector<std::pair<std::string, HabitRecord const*>>> byDim;
+	for (auto const& [key, rec] : profile.Settings)
+	{
+		auto const dash = key.find('-');
+		if (dash == std::string::npos)
+			continue;
+		byDim[key.substr(0, dash)].push_back({ key.substr(dash + 1), &rec });
+	}
+
+	std::string why;
+	for (auto const& [dim, values] : byDim)
+	{
+		// One observed value tells us nothing — we've never seen the setting
+		// differ, so it cannot yet explain any difference in behaviour.
+		if (values.size() < 2)
+		{
+			Debug::Log("[DossierExt] setting %s: only '%s' ever played — no comparison "
+				"possible yet (play with it changed to measure its effect)\n",
+				dim.c_str(), values.front().first.c_str());
+			continue;
+		}
+		// Widest disagreement between any two values of this dimension.
+		double worst = 0.0;
+		std::string a, b, worstWhy;
+		for (size_t i = 0; i < values.size(); ++i)
+		{
+			for (size_t j = i + 1; j < values.size(); ++j)
+			{
+				if (values[i].second->HabitSamples < cfg.TransferMinGames
+					|| values[j].second->HabitSamples < cfg.TransferMinGames)
+					continue;
+				double const d = Divergence(*values[i].second, *values[j].second, why);
+				if (d > worst) { worst = d; a = values[i].first; b = values[j].first; worstWhy = why; }
+			}
+		}
+		if (a.empty())
+		{
+			Debug::Log("[DossierExt] setting %s: %u value(s) seen but none with %d+ games "
+				"yet — no verdict\n", dim.c_str(), values.size(), cfg.TransferMinGames);
+			continue;
+		}
+		Debug::Log("[DossierExt] INFLUENCE %s: %s vs %s divergence=%.2f [%s] -> %s\n",
+			dim.c_str(), a.c_str(), b.c_str(), worst, worstWhy.c_str(),
+			worst >= cfg.TransferThreshold
+			? "THIS SETTING CHANGES HOW THEY PLAY"
+			: "little effect on their play");
+	}
+}
+
 void Distill::FoldAssociations(PlayerProfile& profile, int const houseIndex)
 {
 	auto const& cfg = DossierConfig::Instance;
@@ -286,6 +343,10 @@ void Distill::FoldHabits(PlayerProfile& profile, HouseObs& obs, int const outcom
 		FoldInto(profile.Countries[profile.CurrentCountry], obs, w, opening, outcome);
 	if (cfg.RecPerMap && !profile.CurrentMapKey.empty())
 		FoldInto(profile.Maps[profile.CurrentMapKey], obs, w, opening, outcome);
+	// Every dimension of this match's starting conditions gets the same fold, so
+	// one match teaches all of them at once.
+	for (auto const& key : MatchSettings::Keys())
+		FoldInto(profile.Settings[key], obs, w, opening, outcome);
 
 	if (cfg.RecSpatial && !profile.CurrentMapKey.empty())
 	{

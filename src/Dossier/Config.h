@@ -68,6 +68,13 @@ struct DossierConfig
 	int SpatialTopN = 12;                    // hottest buckets kept per grid
 	int RushWindow = 9000;                   // frames: "early" attacks = a rush
 
+	// Match-settings learning: raw values are too granular to be habit keys
+	// (99k and 100k credits are the same game), so they're bucketed.
+	int CashLow = 5000;        // <= this -> Cash-Low
+	int CashHigh = 30000;      // >= this -> Cash-High
+	int UnitsMany = 5;         // >= this -> Units-Many
+	bool SettingsReport = true;
+
 	// Phase 2.2 — does a strategy TRANSFER across maps/countries?
 	bool TransferReport = true;
 	// A single game always looks "specific" — its own noise IS the whole

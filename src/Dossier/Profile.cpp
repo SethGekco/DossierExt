@@ -139,6 +139,7 @@ namespace
 		if (scope == "Overall") pRec = &profile.Overall;
 		else if (scope == "Country" && !name.empty()) pRec = &profile.Countries[name];
 		else if (scope == "Map" && !name.empty()) pRec = &profile.Maps[name];
+		else if (scope == "Setting" && !name.empty()) pRec = &profile.Settings[name];
 		if (!pRec)
 			return;
 
@@ -353,6 +354,8 @@ bool Profile::Save(PlayerProfile& profile, const char* const lastOutcome)
 		writeHabit("Country." + country, rec);
 	for (auto const& [mapKey, rec] : profile.Maps)
 		writeHabit("Map." + mapKey, rec);
+	for (auto const& [key, rec] : profile.Settings)
+		writeHabit("Setting." + key, rec);
 	for (auto const& [stem, fp] : profile.MapInfo)
 	{
 		if (!fp.Valid())

@@ -9,6 +9,7 @@
 #include "Dossier/Scoreboard.h"
 #include "Dossier/KillTracker.h"
 #include "Dossier/Signs.h"
+#include "Dossier/MatchSettings.h"
 
 #include <CCINIClass.h>
 #include <Utilities/Debug.h>
@@ -119,6 +120,10 @@ void DossierConfig::EnsureParsed()
 	cfg.SpatialTopN = pINI->ReadInteger("Dossier.Records", "SpatialTopN", cfg.SpatialTopN);
 	cfg.RushWindow = pINI->ReadInteger("Dossier.Records", "RushWindow", cfg.RushWindow);
 	cfg.TransferReport = pINI->ReadBool("Dossier.Records", "TransferReport", cfg.TransferReport);
+	cfg.CashLow = pINI->ReadInteger("Dossier.General", "CashLow", cfg.CashLow);
+	cfg.CashHigh = pINI->ReadInteger("Dossier.General", "CashHigh", cfg.CashHigh);
+	cfg.UnitsMany = pINI->ReadInteger("Dossier.General", "UnitsMany", cfg.UnitsMany);
+	cfg.SettingsReport = pINI->ReadBool("Dossier.Records", "SettingsReport", cfg.SettingsReport);
 	cfg.TransferMinGames = pINI->ReadInteger("Dossier.Records", "TransferMinGames", cfg.TransferMinGames);
 	cfg.TransferThreshold = pINI->ReadDouble("Dossier.Records", "TransferThreshold", cfg.TransferThreshold);
 	cfg.MapSimilarThreshold = pINI->ReadDouble("Dossier.Records", "MapSimilarThreshold", cfg.MapSimilarThreshold);
@@ -203,6 +208,7 @@ DEFINE_HOOK(0x685659, DossierExt_Scenario_ClearClasses, 0xA)
 	Scoreboard::Reset();
 	KillTracker::Reset();
 	Signs::Reset();
+	MatchSettings::Reset();
 	DossierConfig::Reset();
 	DossierConfig::EnsureParsed();
 	return 0;

@@ -31,4 +31,10 @@ namespace Distill
 	// the profile's association table (per-country AND Overall), so the next
 	// game can predict from it.
 	void FoldAssociations(PlayerProfile& profile, int houseIndex);
+
+	// Which STARTING CONDITION changes this player most? For each settings
+	// dimension, compare the habit records across its observed values: a large
+	// divergence means that dimension drives them (e.g. cash), a small one means
+	// it doesn't (e.g. superweapons on/off). Reports only; Phase 4+ consults it.
+	void ReportSettingInfluence(PlayerProfile const& profile);
 }

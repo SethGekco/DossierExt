@@ -8,6 +8,7 @@
 #include "Dossier/Scoreboard.h"
 #include "Dossier/Distill.h"
 #include "Dossier/Signs.h"
+#include "Dossier/MatchSettings.h"
 
 #include <HouseClass.h>
 #include <Unsorted.h>
@@ -27,6 +28,7 @@ namespace
 		profile.Maps = baseline.Maps;
 		profile.Spatial = baseline.Spatial;
 		profile.MapInfo = baseline.MapInfo;
+		profile.Settings = baseline.Settings;
 	}
 
 	// Fold this match into a profile and write it. IDEMPOTENT: it rewinds to the
@@ -85,6 +87,7 @@ namespace
 					// Transfer read is most meaningful on the install-wide
 					// record: it spans every name, country and map played.
 					Distill::ReportTransfer(*pGlobal);
+					Distill::ReportSettingInfluence(*pGlobal);
 				}
 			}
 		}
@@ -103,6 +106,7 @@ void Engine::TickHouse(HouseClass* const pHouse)
 	if (!cfg.Parsed || !cfg.Enabled || !pHouse)
 		return;
 
+	MatchSettings::Load();   // starting conditions, before anything folds
 	Identity::EnsureRoster();
 
 	// ── Observatory (Phase 1) ────────────────────────────────────────────
