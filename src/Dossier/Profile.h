@@ -95,6 +95,13 @@ namespace Profile
 	PlayerProfile* Global();
 	void OpenGlobal(const char* countryId, const char* mapKey);
 
+	// The record exactly as it was loaded, before this match contributed.
+	// Folding always restarts from here, which makes the fold IDEMPOTENT: it can
+	// run at every checkpoint without double-counting, so an abandoned match
+	// still teaches (Rex's matches routinely end with no win/loss).
+	PlayerProfile* BaselineByHouse(int houseIndex);
+	PlayerProfile* BaselineGlobal();
+
 	// Write one profile to disk (creates ProfileDir if needed). Logs the path
 	// and result; returns success.
 	bool Save(PlayerProfile& profile, const char* lastOutcome);

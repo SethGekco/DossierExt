@@ -15,6 +15,10 @@ namespace
 	std::map<int, PlayerProfile> g_byHouse; // house index -> profile
 	PlayerProfile g_global;                 // install-wide human record
 	bool g_globalOpen = false;
+	// Snapshots taken at load, before this match contributes anything. Folding
+	// restarts from these every time, which is what makes it idempotent.
+	std::map<int, PlayerProfile> g_baselineByHouse;
+	PlayerProfile g_baselineGlobal;
 
 	// File-name-safe identity: [A-Za-z0-9_-], everything else becomes '_'.
 	std::string Sanitize(const char* raw)
@@ -211,6 +215,8 @@ void Profile::Reset()
 	g_byHouse.clear();
 	g_global = PlayerProfile{};
 	g_globalOpen = false;
+	g_baselineByHouse.clear();
+	g_baselineGlobal = PlayerProfile{};
 }
 
 PlayerProfile* Profile::Global()
@@ -231,6 +237,7 @@ void Profile::OpenGlobal(const char* const countryId, const char* const mapKey)
 	// Fingerprints key off the bare stem (everything before "#spawnN").
 	g_global.CurrentMapStem = std::string(mapKey).substr(0, std::string(mapKey).find('#'));
 	LoadFromDisk(g_global);
+	g_baselineGlobal = g_global;   // pristine on-disk state
 	++g_global.GamesSeen;
 	// Per-scope Played is counted at fold time (completed games only).
 	g_global.Dirty = true;
@@ -245,6 +252,7 @@ PlayerProfile& Profile::Open(const char* const rawName, int const houseIndex, co
 	profile.HouseIndex = houseIndex;
 	profile.CurrentCountry = countryId;
 	LoadFromDisk(profile);
+	g_baselineByHouse[houseIndex] = profile;   // pristine on-disk state
 
 	// Seeing the player at all counts, and writing immediately proves the IO
 	// path at game START rather than discovering a broken path at game end.
@@ -253,6 +261,17 @@ PlayerProfile& Profile::Open(const char* const rawName, int const houseIndex, co
 	profile.Dirty = true;
 	Save(profile, "InProgress");
 	return profile;
+}
+
+PlayerProfile* Profile::BaselineByHouse(int const houseIndex)
+{
+	auto const it = g_baselineByHouse.find(houseIndex);
+	return it != g_baselineByHouse.end() ? &it->second : nullptr;
+}
+
+PlayerProfile* Profile::BaselineGlobal()
+{
+	return g_globalOpen ? &g_baselineGlobal : nullptr;
 }
 
 PlayerProfile* Profile::FindByHouse(int const houseIndex)
