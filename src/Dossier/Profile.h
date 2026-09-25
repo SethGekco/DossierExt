@@ -3,6 +3,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 // One dossier = one INI file per human player identity, kept on disk between
@@ -26,6 +27,9 @@ struct HabitRecord
 	double AvgFirstKill = -1;       // aggression onset (frame of first kill)
 	std::map<std::string, double> UnitMix; // folded composition fractions
 	std::vector<std::string> Opening;      // "frame:TypeID", most recent game
+	// Phase 3 learning: "Sign>Strategy" -> (times the sign fired, times the
+	// strategy was ALSO confirmed that game). Confidence = second/first.
+	std::map<std::string, std::pair<int, int>> Assoc;
 };
 using CountryRecord = HabitRecord; // back-compat alias
 

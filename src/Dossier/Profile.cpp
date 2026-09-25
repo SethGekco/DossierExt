@@ -141,6 +141,17 @@ namespace
 		if (sub.empty()) AssignHabit(*pRec, key, value);
 		else if (sub == "UnitMix") pRec->UnitMix[key] = std::atof(value);
 		else if (sub == "Opening") pRec->Opening.push_back(value);
+		else if (sub == "Assoc")
+		{
+			// "fired,confirmed"
+			int fired = 0, confirmed = 0;
+			if (const char* const comma = std::strchr(value, ','))
+			{
+				fired = std::atoi(value);
+				confirmed = std::atoi(comma + 1);
+			}
+			pRec->Assoc[key] = { fired, confirmed };
+		}
 	}
 
 	// Minimal INI reader for our own files: sections + key=value, no quoting.
@@ -297,6 +308,13 @@ bool Profile::Save(PlayerProfile& profile, const char* const lastOutcome)
 			int n = 0;
 			for (auto const& ev : rec.Opening)
 				std::fprintf(f, "%d=%s\n", n++, ev.c_str());
+		}
+		if (!rec.Assoc.empty())
+		{
+			std::fprintf(f, "[%s.Assoc]\n", prefix.c_str());
+			for (auto const& [pair, counts] : rec.Assoc)
+				std::fprintf(f, "%s=%d,%d\n", pair.c_str(),
+					counts.first, counts.second);
 		}
 	};
 

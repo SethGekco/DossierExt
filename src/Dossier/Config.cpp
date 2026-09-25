@@ -8,6 +8,7 @@
 #include "Dossier/Production.h"
 #include "Dossier/Scoreboard.h"
 #include "Dossier/KillTracker.h"
+#include "Dossier/Signs.h"
 
 #include <CCINIClass.h>
 #include <Utilities/Debug.h>
@@ -155,6 +156,7 @@ void DossierConfig::EnsureParsed()
 		"= %u declared; CapturedCountsAsTech=%d CivilianHeuristic=%d\n",
 		fromAI, extraBuf, cfg.NeutralTechBuildings.size(), cfg.CapturedCountsAsTech,
 		cfg.CivilianHeuristic);
+	Signs::LoadCatalogs();
 	Debug::Log("[DossierExt] [Dossier.Scoreboard]: Losing.Below=%.2f Desperate.Below=%.2f Winning.Above=%.2f "
 		"Hysteresis=%.2f StandingSmoothing=%.2f weights(army/econ/territory)=%.2f/%.2f/%.2f\n",
 		cfg.LosingBelow, cfg.DesperateBelow, cfg.WinningAbove, cfg.Hysteresis, cfg.StandingSmoothing,
@@ -200,6 +202,7 @@ DEFINE_HOOK(0x685659, DossierExt_Scenario_ClearClasses, 0xA)
 	Production::Reset();
 	Scoreboard::Reset();
 	KillTracker::Reset();
+	Signs::Reset();
 	DossierConfig::Reset();
 	DossierConfig::EnsureParsed();
 	return 0;

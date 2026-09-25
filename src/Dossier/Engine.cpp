@@ -7,6 +7,7 @@
 #include "Dossier/Survey.h"
 #include "Dossier/Scoreboard.h"
 #include "Dossier/Distill.h"
+#include "Dossier/Signs.h"
 
 #include <HouseClass.h>
 #include <Unsorted.h>
@@ -42,6 +43,7 @@ namespace
 		if (auto const pObs = Observatory::Find(pHouse->ArrayIndex))
 		{
 			Distill::FoldHabits(profile, *pObs, outcome);
+			Distill::FoldAssociations(profile, pHouse->ArrayIndex);
 			if (auto const pGlobal = Profile::Global())
 			{
 				if (pHouse == HouseClass::CurrentPlayer)
@@ -49,6 +51,7 @@ namespace
 					if (won) ++pGlobal->GamesWon; else ++pGlobal->GamesLost;
 					pGlobal->Names.insert(profile.Name);
 					Distill::FoldHabits(*pGlobal, *pObs, outcome);
+					Distill::FoldAssociations(*pGlobal, pHouse->ArrayIndex);
 					Profile::Save(*pGlobal, won ? "Won" : "Lost");
 					Distill::ReportIdentityTrust(profile);
 					// Transfer read is most meaningful on the install-wide
@@ -82,6 +85,7 @@ void Engine::TickHouse(HouseClass* const pHouse)
 	{
 		Economy::Sample(pHouse);
 		Scoreboard::Evaluate(pHouse);
+		Signs::Evaluate(pHouse);   // Phase 3: tells + ground truth, log-only
 	}
 
 	// Outcome polling — only for houses we opened a dossier on.

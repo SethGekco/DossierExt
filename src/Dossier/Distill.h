@@ -26,4 +26,9 @@ namespace Distill
 	// already-played map by fingerprint, which is what a brand-new map should
 	// inherit from. Phase 2.2 reports; Phase 3+ consults.
 	void ReportTransfer(PlayerProfile const& profile);
+
+	// Phase 3: count this game's fired signs against confirmed strategies into
+	// the profile's association table (per-country AND Overall), so the next
+	// game can predict from it.
+	void FoldAssociations(PlayerProfile& profile, int houseIndex);
 }

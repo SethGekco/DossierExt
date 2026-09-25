@@ -3,6 +3,7 @@
 #include "Dossier/Observatory.h"
 #include "Dossier/Config.h"
 #include "Dossier/Survey.h"
+#include "Dossier/Signs.h"
 
 #include <BuildingTypeClass.h>
 #include <Utilities/Debug.h>
@@ -219,6 +220,45 @@ void Distill::ReportTransfer(PlayerProfile const& profile)
 			bestDist < cfg.MapSimilarThreshold
 			? "SIMILAR: habits learned there apply here"
 			: "different map character; lean on the Overall record instead");
+}
+
+void Distill::FoldAssociations(PlayerProfile& profile, int const houseIndex)
+{
+	auto const& cfg = DossierConfig::Instance;
+	auto const& fired = Signs::FiredSigns(houseIndex);
+	auto const& confirmed = Signs::ConfirmedStrategies(houseIndex);
+	auto const& signs = Signs::SignCatalog();
+	auto const& strategies = Signs::StrategyCatalog();
+	if (fired.empty() || strategies.empty())
+		return;
+
+	// Every fired sign is one more observation of that sign; pairs where the
+	// strategy ALSO happened get the numerator. That ratio IS the prediction.
+	auto foldInto = [&](HabitRecord& rec)
+	{
+		for (int si : fired)
+		{
+			if (si < 0 || si >= static_cast<int>(signs.size()))
+				continue;
+			for (size_t ti = 0; ti < strategies.size(); ++ti)
+			{
+				auto const key = signs[si].Name + ">" + strategies[ti].Name;
+				auto& counts = rec.Assoc[key];
+				++counts.first;
+				if (confirmed.count(static_cast<int>(ti)))
+					++counts.second;
+			}
+		}
+	};
+
+	if (cfg.RecOverall)
+		foldInto(profile.Overall);
+	if (cfg.RecPerCountry)
+		foldInto(profile.Countries[profile.CurrentCountry]);
+
+	Debug::Log("[DossierExt] learned %s: %u sign(s) fired x %u strategy(ies), "
+		"%u confirmed this game\n",
+		profile.Name.c_str(), fired.size(), strategies.size(), confirmed.size());
 }
 
 void Distill::FoldHabits(PlayerProfile& profile, HouseObs& obs, int const outcome)
