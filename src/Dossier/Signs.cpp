@@ -335,10 +335,18 @@ void Signs::Evaluate(HouseClass* const pHouse)
 		if (!Eval(g_signs[i].P, *pObs, frame, measured))
 			continue;
 		fired.insert(static_cast<int>(i));
-		Debug::Log("[DossierExt] SIGN f%d %s: '%s' (%s=%.2f %s %.2f)\n",
-			frame, pProfile->Name.c_str(), g_signs[i].Name.c_str(),
-			g_signs[i].P.Observe.c_str(), measured, g_signs[i].P.Op.c_str(),
-			g_signs[i].P.Value);
+		// FirstKill uses a huge sentinel for "hasn't drawn blood yet"; print
+		// that as words so the log doesn't read like a bogus measurement.
+		bool const sentinel = g_signs[i].P.Observe == "FirstKill" && measured >= 1e9;
+		if (sentinel)
+			Debug::Log("[DossierExt] SIGN f%d %s: '%s' (FirstKill=never-yet, so > %.0f)\n",
+				frame, pProfile->Name.c_str(), g_signs[i].Name.c_str(),
+				g_signs[i].P.Value);
+		else
+			Debug::Log("[DossierExt] SIGN f%d %s: '%s' (%s=%.2f %s %.2f)\n",
+				frame, pProfile->Name.c_str(), g_signs[i].Name.c_str(),
+				g_signs[i].P.Observe.c_str(), measured, g_signs[i].P.Op.c_str(),
+				g_signs[i].P.Value);
 		Predict(*pProfile, g_signs[i].Name, frame);
 	}
 

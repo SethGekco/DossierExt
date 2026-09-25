@@ -126,7 +126,15 @@ void Survey::MaybeRun()
 				bool const listed = pId && cfg.NeutralTechBuildings.count(pId) > 0;
 				bool const civilian = cfg.CivilianHeuristic
 					&& pBld->Type->Capturable && pBld->Type->TechLevel < 0;
-				bool const taken = cfg.CapturedCountsAsTech && pBld->HasBeenCaptured;
+				// "Taken" must mean CHANGED HANDS. HasBeenCaptured does NOT:
+				// verified in-game that a player's own NABNKR (Capturable=false,
+				// CanBeOccupied=yes, MaxNumberOccupants=6) sets it merely by
+				// being garrisoned by its owner's infantry — which inflated the
+				// count with the owner's own bunkers. Owner != InitialOwner is
+				// exact: a real capture (CAPARS02) differs, a garrisoned
+				// self-built bunker does not.
+				bool const taken = cfg.CapturedCountsAsTech
+					&& pTechno->InitialOwner && pOwner != pTechno->InitialOwner;
 				if (listed) ++obs.TechListed;
 				else if (civilian) ++obs.TechCivilian;
 				else if (taken) ++obs.TechCaptured;
