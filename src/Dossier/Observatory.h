@@ -45,6 +45,12 @@ struct HouseObs
 	bool StructInit = false;
 	std::map<int, int> StructCounts;      // BuildingType array index -> count
 	std::map<int, int> PrevStructCounts;
+	// ...of which CHANGED HANDS (captured/spied/engineered). Subtracted from
+	// the counts above so the build-order tape records what a player actually
+	// BUILT — acquiring a structure is not an opening-build decision, and
+	// letting it through corrupts the fingerprint.
+	std::map<int, int> StructCaptured;
+	std::map<int, int> PrevStructCaptured;
 
 	// ── Scoreboard (Scoreboard.cpp) ─────────────────────────────────────
 	bool TierInit = false;

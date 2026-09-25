@@ -7,6 +7,8 @@
 #include <Unsorted.h>
 #include <Utilities/Debug.h>
 
+#include <map>
+
 namespace
 {
 	const char* StructName(int const typeIndex)
@@ -46,12 +48,27 @@ void Production::DiffAfterSurvey()
 			continue;
 		}
 
-		// Report every type whose count rose since the last sweep.
+		auto const lookup = [](std::map<int, int> const& m, int const k)
+		{
+			auto const it = m.find(k);
+			return it != m.end() ? it->second : 0;
+		};
+
+		// Report every type whose count rose since the last sweep — but only
+		// the part that was BUILT. A structure that changed hands (captured,
+		// spied, engineered) is an acquisition, not an opening-build decision,
+		// and letting it through corrupts the fingerprint.
 		for (auto const& [typeIdx, count] : obs.StructCounts)
 		{
-			auto const prevIt = obs.PrevStructCounts.find(typeIdx);
-			int const prev = prevIt != obs.PrevStructCounts.end() ? prevIt->second : 0;
-			int const added = count - prev;
+			int const capturedNow = lookup(obs.StructCaptured, typeIdx);
+			int const capturedPrev = lookup(obs.PrevStructCaptured, typeIdx);
+			int const gained = capturedNow - capturedPrev;
+			if (gained > 0)
+				Debug::Log("[DossierExt] acquired %s#%d f%d: +%d %s (changed hands, not built)\n",
+					pHouse->get_ID(), i, frame, gained, StructName(typeIdx));
+
+			int const prev = lookup(obs.PrevStructCounts, typeIdx);
+			int const added = (count - capturedNow) - (prev - capturedPrev);
 			if (added > 0)
 			{
 				Debug::Log("[DossierExt] build-order %s#%d f%d: +%d %s (now %d)\n",

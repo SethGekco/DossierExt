@@ -83,6 +83,8 @@ void Survey::MaybeRun()
 		obs.OreReachable = 0;
 		obs.PrevStructCounts = obs.StructCounts;
 		obs.StructCounts.clear();
+		obs.PrevStructCaptured = obs.StructCaptured;
+		obs.StructCaptured.clear();
 	}
 
 	// ── One pass over every techno: army value, building value, tech
@@ -135,6 +137,9 @@ void Survey::MaybeRun()
 				// self-built bunker does not.
 				bool const taken = cfg.CapturedCountsAsTech
 					&& pTechno->InitialOwner && pOwner != pTechno->InitialOwner;
+				// Acquired, not built — keep it out of the build-order tape.
+				if (taken)
+					++obs.StructCaptured[pBld->Type->ArrayIndex];
 				if (listed) ++obs.TechListed;
 				else if (civilian) ++obs.TechCivilian;
 				else if (taken) ++obs.TechCaptured;
