@@ -79,6 +79,7 @@ namespace
 		else if (!std::strcmp(key, "AvgPeakArmy")) rec.AvgPeakArmy = std::atof(value);
 		else if (!std::strcmp(key, "AvgMaxFloat")) rec.AvgMaxFloat = std::atof(value);
 		else if (!std::strcmp(key, "AvgFirstKill")) rec.AvgFirstKill = std::atof(value);
+		else if (!std::strcmp(key, "AvgFocusShare")) rec.AvgFocusShare = std::atof(value);
 	}
 
 	// Route "<Scope>[.<Name>][.<Sub>]" — Sub is UnitMix/Opening for habit
@@ -140,6 +141,7 @@ namespace
 		else if (scope == "Country" && !name.empty()) pRec = &profile.Countries[name];
 		else if (scope == "Map" && !name.empty()) pRec = &profile.Maps[name];
 		else if (scope == "Setting" && !name.empty()) pRec = &profile.Settings[name];
+		else if (scope == "Versus" && !name.empty()) pRec = &profile.Versus[name];
 		if (!pRec)
 			return;
 
@@ -316,6 +318,8 @@ bool Profile::Save(PlayerProfile& profile, const char* const lastOutcome)
 			prefix.c_str(), rec.Played, rec.Won, rec.Lost, rec.HabitSamples);
 		std::fprintf(f, "AvgIncome=%.1f\nAvgPeakArmy=%.1f\nAvgMaxFloat=%.1f\nAvgFirstKill=%.1f\n",
 			rec.AvgIncome, rec.AvgPeakArmy, rec.AvgMaxFloat, rec.AvgFirstKill);
+		if (rec.AvgFocusShare >= 0)
+			std::fprintf(f, "AvgFocusShare=%.3f\n", rec.AvgFocusShare);
 		if (!rec.UnitMix.empty())
 		{
 			std::fprintf(f, "[%s.UnitMix]\n", prefix.c_str());
@@ -356,6 +360,8 @@ bool Profile::Save(PlayerProfile& profile, const char* const lastOutcome)
 		writeHabit("Map." + mapKey, rec);
 	for (auto const& [key, rec] : profile.Settings)
 		writeHabit("Setting." + key, rec);
+	for (auto const& [key, rec] : profile.Versus)
+		writeHabit("Versus." + key, rec);
 	for (auto const& [stem, fp] : profile.MapInfo)
 	{
 		if (!fp.Valid())

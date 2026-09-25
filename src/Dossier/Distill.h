@@ -37,4 +37,10 @@ namespace Distill
 	// divergence means that dimension drives them (e.g. cash), a small one means
 	// it doesn't (e.g. superweapons on/off). Reports only; Phase 4+ consults it.
 	void ReportSettingInfluence(PlayerProfile const& profile);
+
+	// The MATCHUP: does facing a given enemy country change what they build, and
+	// do they fixate on (or ignore) particular countries? Fixation is the
+	// exploitable part — a player pouring everything into one opponent is not
+	// watching the others.
+	void ReportMatchupBias(PlayerProfile const& profile);
 }

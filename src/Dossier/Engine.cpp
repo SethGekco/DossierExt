@@ -29,6 +29,7 @@ namespace
 		profile.Spatial = baseline.Spatial;
 		profile.MapInfo = baseline.MapInfo;
 		profile.Settings = baseline.Settings;
+		profile.Versus = baseline.Versus;
 	}
 
 	// Fold this match into a profile and write it. IDEMPOTENT: it rewinds to the
@@ -88,6 +89,7 @@ namespace
 					// record: it spans every name, country and map played.
 					Distill::ReportTransfer(*pGlobal);
 					Distill::ReportSettingInfluence(*pGlobal);
+					Distill::ReportMatchupBias(*pGlobal);
 				}
 			}
 		}

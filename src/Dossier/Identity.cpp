@@ -212,6 +212,26 @@ bool Identity::EnsureRoster()
 			auto& prof = Profile::Open(name.c_str(), pHouse->ArrayIndex, pHouse->get_ID());
 			prof.CurrentMapKey = mapKey;
 			prof.CurrentMapStem = MapStem();
+			// Who they're up against — the matchup is part of the context that
+			// shapes what a player builds ("anticipating country specials").
+			prof.CurrentEnemies.clear();
+			for (int j = 0; j < HouseClass::Array.Count; ++j)
+			{
+				auto const pOther = HouseClass::Array.GetItem(j);
+				if (!pOther || pOther == pHouse || !pOther->Type) continue;
+				if (pOther->IsObserver() || pOther->IsNeutral()) continue;
+				if (pHouse->IsAlliedWith(pOther)) continue;
+				if (auto const pId = pOther->get_ID())
+					prof.CurrentEnemies.push_back(pId);
+			}
+			std::string vs;
+			for (auto const& e : prof.CurrentEnemies)
+			{
+				if (!vs.empty()) vs += ",";
+				vs += e;
+			}
+			Debug::Log("[DossierExt] matchup: %s as %s vs [%s]\n",
+				name.c_str(), pHouse->get_ID(), vs.empty() ? "-" : vs.c_str());
 			Debug::Log("[DossierExt] profiling '%s' as %s on %s (spawn=%d)\n",
 				name.c_str(), pHouse->get_ID(), mapKey.c_str(), pHouse->GetSpawnPosition());
 
@@ -219,7 +239,13 @@ bool Identity::EnsureRoster()
 			// lobby names are other people and must not pollute it.
 			if (pHouse == HouseClass::CurrentPlayer
 				&& DossierConfig::Instance.IdentityMode != "NameOnly")
+			{
 				Profile::OpenGlobal(pHouse->get_ID(), mapKey.c_str());
+				// The install-wide record folds the same matchup, so it needs the
+				// same enemy list (its Versus records would stay empty otherwise).
+				if (auto const pGlobal = Profile::Global())
+					pGlobal->CurrentEnemies = prof.CurrentEnemies;
+			}
 		}
 	}
 

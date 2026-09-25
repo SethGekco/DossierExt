@@ -25,6 +25,10 @@ struct HabitRecord
 	double AvgPeakArmy = 0;         // typical peak army value
 	double AvgMaxFloat = 0;         // typical peak unspent cash (floats money?)
 	double AvgFirstKill = -1;       // aggression onset (frame of first kill)
+	// Only meaningful on a Versus.<Country> record: the share of this player's
+	// hostile kills that went to that country, in matches where it was present.
+	// -1 = never measured.
+	double AvgFocusShare = -1;
 	std::map<std::string, double> UnitMix; // folded composition fractions
 	std::vector<std::string> Opening;      // "frame:TypeID", most recent game
 	// Phase 3 learning: "Sign>Strategy" -> (times the sign fired, times the
@@ -73,12 +77,17 @@ struct PlayerProfile
 	// Per dimension-VALUE rather than per combination, so every match feeds
 	// every dimension and influence becomes measurable in a few games.
 	std::map<std::string, HabitRecord> Settings;
+	// How they play when a given ENEMY country is in the match, keyed by that
+	// country. Per-enemy rather than per-pairing, for the same density reason as
+	// Settings: every match feeds every enemy present.
+	std::map<std::string, HabitRecord> Versus;
 
 	// This game's session state (not persisted as-is).
 	int HouseIndex = -1;
 	std::string CurrentCountry;
 	std::string CurrentMapKey;  // "MapName" or "MapName#spawnN"
 	std::string CurrentMapStem; // bare map name (fingerprint key)
+	std::vector<std::string> CurrentEnemies; // enemy country IDs this match
 	bool OutcomeRecorded = false;
 	bool Dirty = false;
 	bool IsGlobal = false;      // the install-wide "_AllHumans" record

@@ -37,6 +37,19 @@ DEFINE_HOOK(0x702D40, DossierExt_RegisterDestruction_Aggression, 0x5)
 					pKiller->Owner->get_ID(), pKiller->Owner->ArrayIndex, frame);
 		}
 
+		// WHO they fight: attribute the kill to the victim's country, so a
+		// target preference becomes measurable.
+		if (pVictim && pVictim->Owner
+			&& !pKiller->Owner->IsAlliedWith(pVictim->Owner)
+			&& !pVictim->Owner->IsNeutral())
+		{
+			if (auto const pCountry = pVictim->Owner->get_ID())
+			{
+				++k.KillsByCountry[pCountry];
+				++k.HostileKills;
+			}
+		}
+
 		// WHERE they fight: bucket the victim's cell. Only count kills on
 		// someone they're not allied with, so friendly-fire//civilian noise
 		// doesn't paint a false attack route.

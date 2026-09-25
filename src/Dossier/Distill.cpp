@@ -279,6 +279,47 @@ void Distill::ReportSettingInfluence(PlayerProfile const& profile)
 	}
 }
 
+void Distill::ReportMatchupBias(PlayerProfile const& profile)
+{
+	auto const& cfg = DossierConfig::Instance;
+	if (profile.Versus.empty())
+		return;
+
+	// "Fair" attention if they spread violence evenly over the countries they
+	// have actually faced. Focus well above fair = fixation; well below =
+	// they leave that country alone.
+	double const fair = 1.0 / static_cast<double>(profile.Versus.size());
+	std::string why;
+	for (auto const& [enemy, rec] : profile.Versus)
+	{
+		if (rec.HabitSamples < cfg.TransferMinGames)
+		{
+			Debug::Log("[DossierExt] versus %s: %d game(s) — need %d, no verdict yet\n",
+				enemy.c_str(), rec.HabitSamples, cfg.TransferMinGames);
+			continue;
+		}
+
+		// Does facing this country change HOW they build?
+		double const d = Divergence(rec, profile.Overall, why);
+
+		if (rec.AvgFocusShare >= 0 && profile.Versus.size() > 1)
+			Debug::Log("[DossierExt] VERSUS %s: games=%d focus=%.0f%% (even split would be "
+				"%.0f%%) -> %s | composition divergence=%.2f -> %s\n",
+				enemy.c_str(), rec.HabitSamples, rec.AvgFocusShare * 100.0, fair * 100.0,
+				rec.AvgFocusShare > fair * 1.5 ? "FIXATES on this country"
+				: rec.AvgFocusShare < fair * 0.5 ? "LARGELY IGNORES this country"
+				: "attention roughly even",
+				d, d >= cfg.TransferThreshold
+				? "builds DIFFERENTLY against it (anticipating its specials)"
+				: "same build as usual");
+		else
+			Debug::Log("[DossierExt] VERSUS %s: games=%d composition divergence=%.2f -> %s "
+				"(focus share needs 2+ distinct enemy countries on record)\n",
+				enemy.c_str(), rec.HabitSamples, d, d >= cfg.TransferThreshold
+				? "builds DIFFERENTLY against it" : "same build as usual");
+	}
+}
+
 void Distill::FoldAssociations(PlayerProfile& profile, int const houseIndex)
 {
 	auto const& cfg = DossierConfig::Instance;
@@ -347,6 +388,22 @@ void Distill::FoldHabits(PlayerProfile& profile, HouseObs& obs, int const outcom
 	// one match teaches all of them at once.
 	for (auto const& key : MatchSettings::Keys())
 		FoldInto(profile.Settings[key], obs, w, opening, outcome);
+
+	// One record per ENEMY COUNTRY present: how they play when facing it, plus
+	// how much of their violence they aimed at it.
+	for (auto const& enemy : profile.CurrentEnemies)
+	{
+		auto& rec = profile.Versus[enemy];
+		bool const firstVs = (rec.HabitSamples == 0);
+		FoldInto(rec, obs, w, opening, outcome);
+		if (obs.HostileKills > 0)
+		{
+			auto const it = obs.KillsByCountry.find(enemy);
+			double const share = it != obs.KillsByCountry.end()
+				? static_cast<double>(it->second) / obs.HostileKills : 0.0;
+			Fold(rec.AvgFocusShare, share, firstVs || rec.AvgFocusShare < 0, w);
+		}
+	}
 
 	if (cfg.RecSpatial && !profile.CurrentMapKey.empty())
 	{

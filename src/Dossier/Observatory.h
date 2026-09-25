@@ -78,6 +78,10 @@ struct HouseObs
 	int FirstKillFrame = -1;       // frame this house scored its first kill
 	int KillsDealt = 0;
 	int LossesTaken = 0;
+	// WHO they shoot at, by the victim's country. Turns "he attacks" into "he
+	// fixates on Libya and ignores Korea", which is the exploitable part.
+	std::map<std::string, int> KillsByCountry;
+	int HostileKills = 0;          // denominator for focus share
 
 	// Spatial habits — "where do they do things", bucketed "bx,by".
 	std::map<std::string, int> AttackGrid; // where this house kills enemies
