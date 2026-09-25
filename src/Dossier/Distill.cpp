@@ -160,10 +160,20 @@ void Distill::ReportTransfer(PlayerProfile const& profile)
 
 	// Per-country: does the playstyle shift with the country? (Rex's original
 	// premise — now measured instead of assumed.)
+	// Only one country played ⇒ Country.X == Overall exactly ⇒ 0.00 tells us
+	// nothing. Same trap as the identity test.
+	if (profile.Countries.size() <= 1)
+		Debug::Log("[DossierExt] transfer %s: only 1 country on record — "
+			"country divergence not meaningful yet.\n", profile.Name.c_str());
+	else
 	for (auto const& [country, rec] : profile.Countries)
 	{
-		if (rec.HabitSamples < 1)
+		if (rec.HabitSamples < cfg.TransferMinGames)
+		{
+			Debug::Log("[DossierExt] transfer %s country=%s games=%d — need %d, no verdict yet\n",
+				profile.Name.c_str(), country.c_str(), rec.HabitSamples, cfg.TransferMinGames);
 			continue;
+		}
 		double const d = Divergence(rec, profile.Overall, why);
 		Debug::Log("[DossierExt] transfer %s country=%s games=%d divergence=%.2f [%s] -> %s\n",
 			profile.Name.c_str(), country.c_str(), rec.HabitSamples, d, why.c_str(),
@@ -175,8 +185,13 @@ void Distill::ReportTransfer(PlayerProfile const& profile)
 	// Per-map: is the strategy map-invariant, or tailored to this map?
 	for (auto const& [mapKey, rec] : profile.Maps)
 	{
-		if (rec.HabitSamples < 1)
+		if (rec.HabitSamples < cfg.TransferMinGames)
+		{
+			Debug::Log("[DossierExt] transfer %s map=%s games=%d — need %d, no verdict yet "
+				"(one game's noise IS the whole sample)\n",
+				profile.Name.c_str(), mapKey.c_str(), rec.HabitSamples, cfg.TransferMinGames);
 			continue;
+		}
 		double const d = Divergence(rec, profile.Overall, why);
 		Debug::Log("[DossierExt] transfer %s map=%s games=%d divergence=%.2f [%s] -> %s\n",
 			profile.Name.c_str(), mapKey.c_str(), rec.HabitSamples, d, why.c_str(),
@@ -264,6 +279,18 @@ void Distill::ReportIdentityTrust(PlayerProfile const& named)
 
 	// Would this NAME be trusted on its own, or does the AI fall back to the
 	// install-wide record? Phase 2 only reports it; Phase 3+ consults it.
+	// With one name on the install, the global record IS this name's record —
+	// they fold the same games, so divergence is 0.00 by construction. Say so
+	// rather than printing a confident-looking verdict.
+	if (pGlobal->Names.size() <= 1)
+	{
+		Debug::Log("[DossierExt] identity '%s': only %u name on this install — "
+			"divergence not meaningful yet (the install-wide record holds the same "
+			"games). Play under a second name to test it.\n",
+			named.Name.c_str(), pGlobal->Names.size());
+		return;
+	}
+
 	std::string why;
 	double const d = Divergence(named.Overall, pGlobal->Overall, why);
 	bool const enoughGames = named.Overall.HabitSamples >= cfg.TrustNameAfter;

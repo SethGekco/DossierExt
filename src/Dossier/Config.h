@@ -70,6 +70,9 @@ struct DossierConfig
 
 	// Phase 2.2 — does a strategy TRANSFER across maps/countries?
 	bool TransferReport = true;
+	// A single game always looks "specific" — its own noise IS the whole
+	// sample. Require real evidence before issuing a verdict.
+	int TransferMinGames = 2;
 	double TransferThreshold = 0.30;         // below = portable habit
 	double MapSimilarThreshold = 0.25;       // below = maps play alike
 

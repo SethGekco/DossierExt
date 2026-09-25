@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -55,6 +56,10 @@ struct PlayerProfile
 	int GamesSeen = 0;
 	int GamesWon = 0;
 	int GamesLost = 0;
+	// Which player names have fed this record. Only the install-wide profile
+	// uses it: with a single name its habits are IDENTICAL to that name's own
+	// record, so a divergence of 0.00 means "no evidence yet", NOT "consistent".
+	std::set<std::string> Names;
 	HabitRecord Overall;                              // cross-country layer
 	std::map<std::string, HabitRecord> Countries;     // key = country ID
 	std::map<std::string, HabitRecord> Maps;          // key = map, or "map#spawnN"

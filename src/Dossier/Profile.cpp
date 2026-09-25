@@ -47,6 +47,23 @@ namespace
 		return buf;
 	}
 
+	// "a,b,c" -> set
+	void SplitNames(const char* const value, std::set<std::string>& out)
+	{
+		std::string tok;
+		for (const char* p = value; ; ++p)
+		{
+			if (*p == ',' || *p == '\0')
+			{
+				if (!tok.empty()) out.insert(tok);
+				tok.clear();
+				if (*p == '\0') break;
+			}
+			else if (*p != ' ' || !tok.empty())
+				tok += *p;
+		}
+	}
+
 	// Apply one key=value to a habit record.
 	void AssignHabit(HabitRecord& rec, const char* const key, const char* const value)
 	{
@@ -71,7 +88,8 @@ namespace
 
 		if (scope == "Meta")
 		{
-			if (!std::strcmp(key, "GamesSeen")) profile.GamesSeen = std::atoi(value);
+			if (!std::strcmp(key, "Names")) SplitNames(value, profile.Names);
+			else if (!std::strcmp(key, "GamesSeen")) profile.GamesSeen = std::atoi(value);
 			else if (!std::strcmp(key, "GamesWon")) profile.GamesWon = std::atoi(value);
 			else if (!std::strcmp(key, "GamesLost")) profile.GamesLost = std::atoi(value);
 			return;
@@ -250,6 +268,16 @@ bool Profile::Save(PlayerProfile& profile, const char* const lastOutcome)
 		profile.RawName.c_str(), profile.GamesSeen, profile.GamesWon, profile.GamesLost);
 	std::fprintf(f, "LastSeen=%s\nLastCountry=%s\nLastOutcome=%s\n",
 		Timestamp().c_str(), profile.CurrentCountry.c_str(), lastOutcome);
+	if (!profile.Names.empty())
+	{
+		std::string joined;
+		for (auto const& n : profile.Names)
+		{
+			if (!joined.empty()) joined += ",";
+			joined += n;
+		}
+		std::fprintf(f, "Names=%s\n", joined.c_str());
+	}
 	// One habit record, under an arbitrary scope prefix.
 	auto writeHabit = [&f](std::string const& prefix, HabitRecord const& rec)
 	{

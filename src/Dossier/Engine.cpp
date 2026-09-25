@@ -47,6 +47,7 @@ namespace
 				if (pHouse == HouseClass::CurrentPlayer)
 				{
 					if (won) ++pGlobal->GamesWon; else ++pGlobal->GamesLost;
+					pGlobal->Names.insert(profile.Name);
 					Distill::FoldHabits(*pGlobal, *pObs, outcome);
 					Profile::Save(*pGlobal, won ? "Won" : "Lost");
 					Distill::ReportIdentityTrust(profile);
