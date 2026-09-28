@@ -18,6 +18,24 @@
 namespace
 {
 	int g_lastCheckpointFrame = 0;
+	bool g_reportedThisMatch = false;
+
+	// The analysis reports were gated behind a clean win/loss — the same mistake
+	// the fold itself had. Verified in a real log: 0 OUTCOME lines vs 54 abandoned
+	// folds, so NONE of them had ever been emitted. Emit once per match instead.
+	void RunReports(PlayerProfile& named)
+	{
+		if (g_reportedThisMatch)
+			return;
+		g_reportedThisMatch = true;
+		Distill::ReportIdentityTrust(named);
+		if (auto const pGlobal = Profile::Global())
+		{
+			Distill::ReportTransfer(*pGlobal);
+			Distill::ReportSettingInfluence(*pGlobal);
+			Distill::ReportMatchupBias(*pGlobal);
+		}
+	}
 
 	// Restore the folded scopes to their pristine on-disk state, so a fold can be
 	// re-run from scratch. Session fields and [Meta] totals are left alone.
@@ -84,12 +102,9 @@ namespace
 					pGlobal->Names.insert(profile.Name);
 					FoldAndSave(*pGlobal, Profile::BaselineGlobal(), *pObs,
 						pHouse->ArrayIndex, outcome, won ? "Won" : "Lost");
-					Distill::ReportIdentityTrust(profile);
-					// Transfer read is most meaningful on the install-wide
-					// record: it spans every name, country and map played.
-					Distill::ReportTransfer(*pGlobal);
-					Distill::ReportSettingInfluence(*pGlobal);
-					Distill::ReportMatchupBias(*pGlobal);
+					// A real verdict supersedes any earlier in-match report.
+					g_reportedThisMatch = false;
+					RunReports(profile);
 				}
 			}
 		}
@@ -100,6 +115,7 @@ namespace
 void Engine::Reset()
 {
 	g_lastCheckpointFrame = 0;
+	g_reportedThisMatch = false;
 }
 
 void Engine::TickHouse(HouseClass* const pHouse)
@@ -146,9 +162,15 @@ void Engine::TickHouse(HouseClass* const pHouse)
 					FoldAndSave(*pProfile, Profile::BaselineByHouse(pHouse->ArrayIndex),
 						*pObs, pHouse->ArrayIndex, 0, "Abandoned");
 					if (pHouse == HouseClass::CurrentPlayer)
+					{
 						if (auto const pGlobal = Profile::Global())
 							FoldAndSave(*pGlobal, Profile::BaselineGlobal(), *pObs,
 								pHouse->ArrayIndex, 0, "Abandoned");
+						// Emit the analysis once per match even when it never
+						// reaches a verdict — otherwise, for someone who doesn't
+						// play games to the end, it never prints at all.
+						RunReports(*pProfile);
+					}
 				}
 		}
 		Profile::CheckpointAll();
