@@ -29,6 +29,10 @@ struct HabitRecord
 	// hostile kills that went to that country, in matches where it was present.
 	// -1 = never measured.
 	double AvgFocusShare = -1;
+	// Average number of enemies present when this country was faced. The fair
+	// share of attention is 1/AvgEnemies — NOT 1/(countries ever seen), which
+	// made a 1v1 look like 99% "fixation" when there was nobody else to shoot.
+	double AvgEnemies = -1;
 	std::map<std::string, double> UnitMix; // folded composition fractions
 	std::vector<std::string> Opening;      // "frame:TypeID", most recent game
 	// Phase 3 learning: "Sign>Strategy" -> (times the sign fired, times the

@@ -80,6 +80,7 @@ namespace
 		else if (!std::strcmp(key, "AvgMaxFloat")) rec.AvgMaxFloat = std::atof(value);
 		else if (!std::strcmp(key, "AvgFirstKill")) rec.AvgFirstKill = std::atof(value);
 		else if (!std::strcmp(key, "AvgFocusShare")) rec.AvgFocusShare = std::atof(value);
+		else if (!std::strcmp(key, "AvgEnemies")) rec.AvgEnemies = std::atof(value);
 	}
 
 	// Route "<Scope>[.<Name>][.<Sub>]" — Sub is UnitMix/Opening for habit
@@ -320,6 +321,8 @@ bool Profile::Save(PlayerProfile& profile, const char* const lastOutcome)
 			rec.AvgIncome, rec.AvgPeakArmy, rec.AvgMaxFloat, rec.AvgFirstKill);
 		if (rec.AvgFocusShare >= 0)
 			std::fprintf(f, "AvgFocusShare=%.3f\n", rec.AvgFocusShare);
+		if (rec.AvgEnemies >= 0)
+			std::fprintf(f, "AvgEnemies=%.2f\n", rec.AvgEnemies);
 		if (!rec.UnitMix.empty())
 		{
 			std::fprintf(f, "[%s.UnitMix]\n", prefix.c_str());

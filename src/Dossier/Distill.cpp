@@ -285,11 +285,10 @@ void Distill::ReportMatchupBias(PlayerProfile const& profile)
 	if (profile.Versus.empty())
 		return;
 
-	// "Fair" attention if they spread violence evenly over the countries they
-	// have actually faced. Focus well above fair = fixation; well below =
-	// they leave that country alone.
-	double const fair = 1.0 / static_cast<double>(profile.Versus.size());
-	std::string why;
+	// ── Attention bias ───────────────────────────────────────────────────
+	// Fair share is 1/(enemies actually present when that country was faced),
+	// NOT 1/(countries ever seen). The old denominator made a 1v1 read as 99%
+	// "fixation" when there was literally nobody else to shoot at.
 	for (auto const& [enemy, rec] : profile.Versus)
 	{
 		if (rec.HabitSamples < cfg.TransferMinGames)
@@ -298,26 +297,62 @@ void Distill::ReportMatchupBias(PlayerProfile const& profile)
 				enemy.c_str(), rec.HabitSamples, cfg.TransferMinGames);
 			continue;
 		}
+		if (rec.AvgFocusShare < 0 || rec.AvgEnemies < 1.0)
+		{
+			Debug::Log("[DossierExt] versus %s: games=%d, attention not measurable "
+				"(no hostile kills recorded, or enemy count unknown)\n",
+				enemy.c_str(), rec.HabitSamples);
+			continue;
+		}
 
-		// Does facing this country change HOW they build?
-		double const d = Divergence(rec, profile.Overall, why);
-
-		if (rec.AvgFocusShare >= 0 && profile.Versus.size() > 1)
-			Debug::Log("[DossierExt] VERSUS %s: games=%d focus=%.0f%% (even split would be "
-				"%.0f%%) -> %s | composition divergence=%.2f -> %s\n",
-				enemy.c_str(), rec.HabitSamples, rec.AvgFocusShare * 100.0, fair * 100.0,
-				rec.AvgFocusShare > fair * 1.5 ? "FIXATES on this country"
-				: rec.AvgFocusShare < fair * 0.5 ? "LARGELY IGNORES this country"
-				: "attention roughly even",
-				d, d >= cfg.TransferThreshold
-				? "builds DIFFERENTLY against it (anticipating its specials)"
-				: "same build as usual");
-		else
-			Debug::Log("[DossierExt] VERSUS %s: games=%d composition divergence=%.2f -> %s "
-				"(focus share needs 2+ distinct enemy countries on record)\n",
-				enemy.c_str(), rec.HabitSamples, d, d >= cfg.TransferThreshold
-				? "builds DIFFERENTLY against it" : "same build as usual");
+		double const fair = 1.0 / rec.AvgEnemies;
+		// With one enemy, share is 100% by construction — say so instead of
+		// calling it fixation.
+		if (rec.AvgEnemies < 1.5)
+		{
+			Debug::Log("[DossierExt] versus %s: games=%d focus=%.0f%% but avg %.1f enemies "
+				"— share is forced, attention bias NOT measurable in 1v1\n",
+				enemy.c_str(), rec.HabitSamples, rec.AvgFocusShare * 100.0, rec.AvgEnemies);
+			continue;
+		}
+		Debug::Log("[DossierExt] VERSUS %s: games=%d focus=%.0f%% of kills vs fair share "
+			"%.0f%% (avg %.1f enemies) -> %s\n",
+			enemy.c_str(), rec.HabitSamples, rec.AvgFocusShare * 100.0, fair * 100.0,
+			rec.AvgEnemies,
+			rec.AvgFocusShare > fair * 1.5 ? "FIXATES on this country"
+			: rec.AvgFocusShare < fair * 0.5 ? "LARGELY IGNORES this country"
+			: "attention roughly even");
 	}
+
+	// ── Does the matchup change the BUILD? ───────────────────────────────
+	// Compared country-against-country, not against Overall. Overall blends
+	// every country played, so a narrow per-enemy record always differed from
+	// it — which made "builds differently" fire for every opponent and carry no
+	// information. The widest pair is the honest measure.
+	std::vector<std::pair<std::string, HabitRecord const*>> usable;
+	for (auto const& [enemy, rec] : profile.Versus)
+		if (rec.HabitSamples >= cfg.TransferMinGames)
+			usable.push_back({ enemy, &rec });
+	if (usable.size() < 2)
+	{
+		Debug::Log("[DossierExt] matchup build: fewer than 2 enemy countries with %d+ games "
+			"— cannot tell whether the opponent changes his build yet\n", cfg.TransferMinGames);
+		return;
+	}
+
+	double worst = 0.0;
+	std::string a, b, worstWhy, why;
+	for (size_t i = 0; i < usable.size(); ++i)
+		for (size_t j = i + 1; j < usable.size(); ++j)
+		{
+			double const d = Divergence(*usable[i].second, *usable[j].second, why);
+			if (d > worst) { worst = d; a = usable[i].first; b = usable[j].first; worstWhy = why; }
+		}
+	Debug::Log("[DossierExt] MATCHUP BUILD: widest difference %s vs %s = %.2f [%s] -> %s\n",
+		a.c_str(), b.c_str(), worst, worstWhy.c_str(),
+		worst >= cfg.TransferThreshold
+		? "the OPPONENT changes what he builds"
+		: "he builds much the same whoever he faces");
 }
 
 void Distill::FoldAssociations(PlayerProfile& profile, int const houseIndex)
@@ -403,6 +438,9 @@ void Distill::FoldHabits(PlayerProfile& profile, HouseObs& obs, int const outcom
 				? static_cast<double>(it->second) / obs.HostileKills : 0.0;
 			Fold(rec.AvgFocusShare, share, firstVs || rec.AvgFocusShare < 0, w);
 		}
+		// How crowded was the match? Needed so fair share is 1/enemies-present.
+		Fold(rec.AvgEnemies, static_cast<double>(profile.CurrentEnemies.size()),
+			firstVs || rec.AvgEnemies < 0, w);
 	}
 
 	if (cfg.RecSpatial && !profile.CurrentMapKey.empty())
