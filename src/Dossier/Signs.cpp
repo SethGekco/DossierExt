@@ -2,6 +2,7 @@
 #include "Dossier/Observatory.h"
 #include "Dossier/Config.h"
 #include "Dossier/Profile.h"
+#include "Dossier/Actuator.h"
 
 #include <CCINIClass.h>
 #include <HouseClass.h>
@@ -187,7 +188,8 @@ namespace
 		return nullptr;
 	}
 
-	// A sign just fired — say what it has historically preceded for this player.
+	// A sign just fired — say what it has historically preceded for this player,
+	// and (Phase 4) let the Actuator decide whether to answer it.
 	void Predict(PlayerProfile const& profile, std::string const& signName, int const frame)
 	{
 		auto const pRec = LookupRecord(profile);
@@ -214,6 +216,7 @@ namespace
 				"(%d/%d = %.0f%% of past games for %s as %s)\n",
 				frame, signName.c_str(), strat.Name.c_str(), confirmed, fired,
 				conf * 100.0, profile.Name.c_str(), profile.CurrentCountry.c_str());
+			Actuator::OnPredicted(profile.HouseIndex, strat.Name, fired, confirmed);
 		}
 	}
 }

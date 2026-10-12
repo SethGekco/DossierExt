@@ -74,6 +74,9 @@ struct DossierConfig
 	int CashHigh = 30000;      // >= this -> Cash-High
 	int UnitsMany = 5;         // >= this -> Units-Many
 	bool SettingsReport = true;
+	// Phase 4 actuation master switch. Default OFF: this is the first thing in
+	// DossierExt that changes what the AI does, so it must be opted into.
+	bool ActuationEnabled = false;
 
 	// Phase 2.2 — does a strategy TRANSFER across maps/countries?
 	bool TransferReport = true;
