@@ -30,6 +30,17 @@ namespace
 		else pT->Enabled_Hard = v;
 	}
 
+	// AITriggerTypeClass has no ArrayIndex member, so find its position once and
+	// store THAT rather than the pointer: the type array is rebuilt per scenario,
+	// and an index stays bounds-checkable where a stale pointer would not.
+	int IndexOf(AITriggerTypeClass* const pT)
+	{
+		for (int i = 0; i < AITriggerTypeClass::Array.Count; ++i)
+			if (AITriggerTypeClass::Array.GetItem(i) == pT)
+				return i;
+		return -1;
+	}
+
 	// One response: which triggers to force on/off when a strategy is predicted.
 	struct Response
 	{
@@ -127,7 +138,10 @@ namespace
 		bool const before = GetFlag(pT, flag);
 		if (before == value)
 			return;
-		g_saved.push_back({ pT->ArrayIndex, flag, before });
+		int const idx = IndexOf(pT);
+		if (idx < 0)
+			return;   // not in the live array; refuse rather than flip blind
+		g_saved.push_back({ idx, flag, before });
 		SetFlag(pT, flag, value);
 		Debug::Log("[DossierExt] ACT f%d %s#%d: %s trigger '%s' (flag %d: %d->%d) "
 			"because %s predicted [%s]\n",
