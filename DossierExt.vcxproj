@@ -44,6 +44,7 @@
     <ClCompile Include="src\Dossier\MatchSettings.cpp" />
     <ClCompile Include="src\Dossier\Actuator.cpp" />
     <ClCompile Include="src\Dossier\AttackWindow.cpp" />
+    <ClCompile Include="src\Dossier\SellWatch.cpp" />
   </ItemGroup>
 
   <!-- Header files -->
@@ -64,6 +65,7 @@
     <ClInclude Include="src\Dossier\MatchSettings.h" />
     <ClInclude Include="src\Dossier\Actuator.h" />
     <ClInclude Include="src\Dossier\AttackWindow.h" />
+    <ClInclude Include="src\Dossier\SellWatch.h" />
   </ItemGroup>
 
   <PropertyGroup Label="Globals">

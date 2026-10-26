@@ -27,6 +27,7 @@ struct DossierConfig
 	bool DebugTicks = false;
 	int CheckpointInterval = 3000;          // frames between profile flushes
 	std::string ProfileDir = "DossierProfiles";
+	bool SellWatch = true;                   // log who orders an AI base liquidation
 
 	// Phase 1 — Observatory
 	int EconWindow = 450;                    // frames per economy sample

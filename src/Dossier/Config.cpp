@@ -12,6 +12,7 @@
 #include "Dossier/MatchSettings.h"
 #include "Dossier/Actuator.h"
 #include "Dossier/AttackWindow.h"
+#include "Dossier/SellWatch.h"
 
 #include <CCINIClass.h>
 #include <Utilities/Debug.h>
@@ -88,10 +89,13 @@ void DossierConfig::EnsureParsed()
 	cfg.ScoreboardPeriod = pINI->ReadInteger("Dossier.General", "ScoreboardPeriod", cfg.ScoreboardPeriod);
 	cfg.OpeningMaxEvents = pINI->ReadInteger("Dossier.General", "OpeningMaxEvents", cfg.OpeningMaxEvents);
 	cfg.RecencyWeight = pINI->ReadDouble("Dossier.General", "RecencyWeight", cfg.RecencyWeight);
+	cfg.SellWatch = pINI->ReadBool("Dossier.General", "SellWatch", cfg.SellWatch);
 	Debug::Log("[DossierExt] [Dossier.General]: Enabled=%d DebugTicks=%d CheckpointInterval=%d ProfileDir=%s "
 		"EconWindow=%d EconSmoothing=%.2f SurveyPeriod=%d OreReachRadius=%d ScoreboardPeriod=%d\n",
 		cfg.Enabled, cfg.DebugTicks, cfg.CheckpointInterval, cfg.ProfileDir.c_str(),
 		cfg.EconWindow, cfg.EconSmoothing, cfg.SurveyPeriod, cfg.OreReachRadius, cfg.ScoreboardPeriod);
+	Debug::Log("[DossierExt] [Dossier.General]: SellWatch=%d (logs AI fire sales + who called them)\n",
+		cfg.SellWatch);
 
 	// ─── [Dossier.Identity] — name-vs-install identity policy ───────────
 	pINI->ReadString("Dossier.Identity", "Mode", cfg.IdentityMode.c_str(), buf, sizeof(buf));
@@ -222,6 +226,7 @@ DEFINE_HOOK(0x685659, DossierExt_Scenario_ClearClasses, 0xA)
 	KillTracker::Reset();
 	Signs::Reset();
 	MatchSettings::Reset();
+	SellWatch::Reset();
 	// Put any trigger flags back BEFORE wiping our record of them.
 	Actuator::RestoreAll();
 	Actuator::Reset();

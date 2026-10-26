@@ -10,6 +10,7 @@
 #include "Dossier/Signs.h"
 #include "Dossier/MatchSettings.h"
 #include "Dossier/AttackWindow.h"
+#include "Dossier/SellWatch.h"
 
 #include <HouseClass.h>
 #include <Unsorted.h>
@@ -136,6 +137,7 @@ void Engine::TickHouse(HouseClass* const pHouse)
 	Survey::MaybeRun();
 	if (!pHouse->IsObserver() && !pHouse->IsNeutral())
 	{
+		SellWatch::Tick(pHouse);   // diagnostic: who liquidates an AI base
 		Economy::Sample(pHouse);
 		Scoreboard::Evaluate(pHouse);
 		Signs::Evaluate(pHouse);   // Phase 3: tells + ground truth, log-only

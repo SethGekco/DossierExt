@@ -11,6 +11,36 @@
 > treats its exported API, its zone **names**, and its on-disk format as
 > contracts — read its CHANGELOG before assuming any of them.
 
+## [unreleased] — 2026-10-26
+
+### Added — SellWatch (diagnostic, log-only, `[Dossier.General] SellWatch=yes`)
+- Why: Rex's Easy AIs liquidated their bases ~f2100 (GAPOWR+GAPILE torn down in
+  the same frame, GAREFN ~110 frames later) and Short Game then defeated them
+  with ~39 live units. No DLL logged a fire sale, and the ConYard left
+  invisibly: PrerequisiteExt's `SOLD by house` line skips `UndeploysInto`
+  types, so "GACNST never sold" in that log means nothing.
+- New hook **0x5013A0 `HouseClass::Fire_Sale`** (IHouse vtable +0x34; `push
+  edi; mov edi,[esp+8]` = 5 bytes, no rel32; nobody else hooks it). Logs
+  `FIRESALE <house> called from <module>+<rva>` — the return address names
+  the culprit. gamemd's own sites decode by name: 0x4FD7BA = AIMode SellAll
+  tick, 0x4FD901 = last-legs (normally seen as Phobos.dll, whose
+  `HouseClass_UpdateAI_OnLastLegs` replaces that call).
+- Per AI house tick: `sellwatch ... AIMode a->b ConYards c->d` and `SELL
+  START <type>`, each with money, ConYard/building counts, the +0x54D8 stamp,
+  and the engine's exact last-legs factory census (alive, !InLimbo,
+  `Type->Factory != None`). `CONYARD DESTROYED ... by` from the kill seat
+  separates combat deaths from sales.
+- Decoded from gamemd-spawn.exe so the log reads against ground truth:
+  HouseClass +0x250 AIMode (0 General, 1 LowOnCash <25 credits, 3 = 900-frame
+  window after the +0x54D8 stamp which skips last-legs, 4 SellAll); script
+  action 30 (jump table 0x6E9F74) and two TAction handlers are the ONLY
+  writers of SellAll; Fire_Sale has no direct callers, only the vtable.
+  Ruled out for the 2026-10-25 game: DoctrineExt's two Fire_Sale calls (need
+  crates and !ShortGame; game was Crates-Off/ShortGame-On), aimd.ini and map
+  scripts (no action 30 anywhere; map has no triggers), Phobos AutoDeath
+  (only E1DroneLauncher), BaseUnitGuard (not installed), SquadExt (members
+  are infantry). Remove or default-off once the cause is found.
+
 ## [unreleased] — 2026-09-24
 
 ### Added — Phase 3: inference

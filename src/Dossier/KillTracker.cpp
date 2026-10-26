@@ -1,6 +1,7 @@
 #include "Dossier/KillTracker.h"
 #include "Dossier/Observatory.h"
 #include "Dossier/Config.h"
+#include "Dossier/SellWatch.h"
 
 #include <TechnoClass.h>
 #include <HouseClass.h>
@@ -20,6 +21,8 @@ DEFINE_HOOK(0x702D40, DossierExt_RegisterDestruction_Aggression, 0x5)
 {
 	GET(TechnoClass* const, pVictim, ECX);
 	GET_STACK(TechnoClass* const, pKiller, 0x4);
+
+	SellWatch::OnDestroyed(pVictim, pKiller);
 
 	int const frame = Unsorted::CurrentFrame;
 
