@@ -30,7 +30,7 @@ ledger knows the player's float, income and spend; the Scoreboard knows standing
 to answer force X within T seconds, and weight offensive triggers into it.
 Gate it on `[Dossier.Escalation] AttackWindow.Unlock=` like any other lever.
 
-## 3. Weakness ledger + targeting (actuator #3, Phase 5)
+## 3. ~~Weakness ledger~~ — LEDGER DONE 2026-10-25 (untested); TARGETING still open (needs trigger IDs)
 Persist what actually beat this player (and what they never counter) per country,
 then bias trigger selection game-over-game. The `Versus` "LARGELY IGNORES"
 finding is already a weakness signal with nothing consuming it.
