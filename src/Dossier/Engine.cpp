@@ -9,6 +9,7 @@
 #include "Dossier/Distill.h"
 #include "Dossier/Signs.h"
 #include "Dossier/MatchSettings.h"
+#include "Dossier/AttackWindow.h"
 
 #include <HouseClass.h>
 #include <Unsorted.h>
@@ -136,6 +137,7 @@ void Engine::TickHouse(HouseClass* const pHouse)
 		Economy::Sample(pHouse);
 		Scoreboard::Evaluate(pHouse);
 		Signs::Evaluate(pHouse);   // Phase 3: tells + ground truth, log-only
+		AttackWindow::Evaluate(pHouse);   // Phase 4: is a strike unanswerable?
 	}
 
 	// Outcome polling — only for houses we opened a dossier on.

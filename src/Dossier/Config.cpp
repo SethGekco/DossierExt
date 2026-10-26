@@ -11,6 +11,7 @@
 #include "Dossier/Signs.h"
 #include "Dossier/MatchSettings.h"
 #include "Dossier/Actuator.h"
+#include "Dossier/AttackWindow.h"
 
 #include <CCINIClass.h>
 #include <Utilities/Debug.h>
@@ -126,6 +127,16 @@ void DossierConfig::EnsureParsed()
 	cfg.UnitsMany = pINI->ReadInteger("Dossier.General", "UnitsMany", cfg.UnitsMany);
 	cfg.SettingsReport = pINI->ReadBool("Dossier.Records", "SettingsReport", cfg.SettingsReport);
 	cfg.ActuationEnabled = pINI->ReadBool("Dossier.Actuation", "Enabled", cfg.ActuationEnabled);
+	cfg.WindowEnabled = pINI->ReadBool("Dossier.AttackWindow", "Enabled", cfg.WindowEnabled);
+	cfg.WindowPeriod = pINI->ReadInteger("Dossier.AttackWindow", "Period", cfg.WindowPeriod);
+	cfg.WindowHorizon = pINI->ReadInteger("Dossier.AttackWindow", "Horizon", cfg.WindowHorizon);
+	cfg.WindowAffordRatio = pINI->ReadDouble("Dossier.AttackWindow", "AffordRatio", cfg.WindowAffordRatio);
+	cfg.WindowMinArmy = pINI->ReadInteger("Dossier.AttackWindow", "MinArmy", cfg.WindowMinArmy);
+	cfg.WindowHysteresis = pINI->ReadDouble("Dossier.AttackWindow", "Hysteresis", cfg.WindowHysteresis);
+	Debug::Log("[DossierExt] [Dossier.AttackWindow]: Enabled=%d Period=%d Horizon=%d "
+		"AffordRatio=%.2f MinArmy=%d Hysteresis=%.2f\n",
+		cfg.WindowEnabled, cfg.WindowPeriod, cfg.WindowHorizon, cfg.WindowAffordRatio,
+		cfg.WindowMinArmy, cfg.WindowHysteresis);
 	cfg.TransferMinGames = pINI->ReadInteger("Dossier.Records", "TransferMinGames", cfg.TransferMinGames);
 	cfg.TransferThreshold = pINI->ReadDouble("Dossier.Records", "TransferThreshold", cfg.TransferThreshold);
 	cfg.MapSimilarThreshold = pINI->ReadDouble("Dossier.Records", "MapSimilarThreshold", cfg.MapSimilarThreshold);
@@ -214,6 +225,7 @@ DEFINE_HOOK(0x685659, DossierExt_Scenario_ClearClasses, 0xA)
 	// Put any trigger flags back BEFORE wiping our record of them.
 	Actuator::RestoreAll();
 	Actuator::Reset();
+	AttackWindow::Reset();
 	DossierConfig::Reset();
 	DossierConfig::EnsureParsed();
 	return 0;

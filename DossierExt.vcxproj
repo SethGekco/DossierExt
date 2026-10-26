@@ -43,6 +43,7 @@
     <ClCompile Include="src\Dossier\Signs.cpp" />
     <ClCompile Include="src\Dossier\MatchSettings.cpp" />
     <ClCompile Include="src\Dossier\Actuator.cpp" />
+    <ClCompile Include="src\Dossier\AttackWindow.cpp" />
   </ItemGroup>
 
   <!-- Header files -->
@@ -62,6 +63,7 @@
     <ClInclude Include="src\Dossier\Signs.h" />
     <ClInclude Include="src\Dossier\MatchSettings.h" />
     <ClInclude Include="src\Dossier\Actuator.h" />
+    <ClInclude Include="src\Dossier\AttackWindow.h" />
   </ItemGroup>
 
   <PropertyGroup Label="Globals">

@@ -78,6 +78,15 @@ struct DossierConfig
 	// DossierExt that changes what the AI does, so it must be opted into.
 	bool ActuationEnabled = false;
 
+	// Phase 4 — [Dossier.AttackWindow]. Detection logs for free; acting on it
+	// goes through the Actuator's gates under the response name "AttackWindow".
+	bool WindowEnabled = true;
+	int WindowPeriod = 450;          // frames between affordability checks
+	int WindowHorizon = 900;         // how far ahead their income is counted
+	double WindowAffordRatio = 0.6;  // they must field >=60% of our strike value
+	int WindowMinArmy = 20000;       // below this we have nothing to exploit with
+	double WindowHysteresis = 0.15;  // slack to STAY open, so it can't flicker
+
 	// Phase 2.2 — does a strategy TRANSFER across maps/countries?
 	bool TransferReport = true;
 	// A single game always looks "specific" — its own noise IS the whole
