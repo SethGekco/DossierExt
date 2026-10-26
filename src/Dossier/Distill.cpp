@@ -69,6 +69,25 @@ namespace
 			}
 		}
 
+		// Weakness ledger, same union-decay as UnitMix so a counter that stops
+		// being used fades instead of lingering forever.
+		if (obs.HostileLosses > 0)
+		{
+			std::set<std::string> lk;
+			for (auto const& [id, _] : rec.LostTo) lk.insert(id);
+			for (auto const& [id, _] : obs.LostToType) lk.insert(id);
+			for (auto const& id : lk)
+			{
+				auto const it = obs.LostToType.find(id);
+				double const sample = it != obs.LostToType.end()
+					? static_cast<double>(it->second) / obs.HostileLosses : 0.0;
+				double cur = rec.LostTo.count(id) ? rec.LostTo.at(id) : 0.0;
+				Fold(cur, sample, first, w);
+				if (cur < 0.001) rec.LostTo.erase(id);
+				else rec.LostTo[id] = cur;
+			}
+		}
+
 		rec.Opening = opening;
 		++rec.HabitSamples;
 	}
@@ -353,6 +372,60 @@ void Distill::ReportMatchupBias(PlayerProfile const& profile)
 		worst >= cfg.TransferThreshold
 		? "the OPPONENT changes what he builds"
 		: "he builds much the same whoever he faces");
+}
+
+void Distill::ReportWeakness(PlayerProfile const& profile)
+{
+	auto const& cfg = DossierConfig::Instance;
+
+	// Report per country, falling back to Overall, so "what beats him" can
+	// differ by the faction he picks — which is the whole premise of the file.
+	auto reportOne = [&](const char* const scope, HabitRecord const& rec)
+	{
+		if (rec.HabitSamples < cfg.TransferMinGames || rec.LostTo.empty())
+			return;
+		// Top few killers by share of his losses. This is DESCRIPTIVE - "38% of
+		// what he loses dies to APOC" needs no baseline, so unlike a
+		// fixation-style verdict it cannot come out always-true. What it does
+		// NOT say is whether APOC is over-performing: a common unit kills a lot
+		// simply by being common. Normalising by how much of it the enemy
+		// actually fielded would answer that, and is deliberately not claimed
+		// here.
+		std::vector<std::pair<std::string, double>> top(rec.LostTo.begin(), rec.LostTo.end());
+		std::sort(top.begin(), top.end(), [](auto const& a, auto const& b)
+			{ return a.second != b.second ? a.second > b.second : a.first < b.first; });
+		std::string line;
+		for (size_t i = 0; i < top.size() && i < 4; ++i)
+		{
+			if (top[i].second < 0.02) break;
+			char part[48];
+			std::snprintf(part, sizeof(part), "%s %.0f%%  ", top[i].first.c_str(),
+				top[i].second * 100.0);
+			line += part;
+		}
+		if (line.empty())
+			return;
+		Debug::Log("[DossierExt] WEAKNESS %s (%s, %d games): loses most to -> %s\n",
+			profile.Name.c_str(), scope, rec.HabitSamples, line.c_str());
+	};
+
+	for (auto const& [country, rec] : profile.Countries)
+		reportOne(country.c_str(), rec);
+	reportOne("Overall", profile.Overall);
+
+	// The other weakness already in the data with nothing consuming it: an
+	// enemy country he demonstrably leaves alone is free to operate.
+	for (auto const& [enemy, rec] : profile.Versus)
+	{
+		if (rec.HabitSamples < cfg.TransferMinGames) continue;
+		if (rec.AvgFocusShare < 0 || rec.AvgEnemies < 1.5) continue;
+		double const fair = 1.0 / rec.AvgEnemies;
+		if (rec.AvgFocusShare < fair * 0.5)
+			Debug::Log("[DossierExt] WEAKNESS %s: leaves %s alone (%.0f%% of kills vs "
+				"%.0f%% fair over %d games) -> that country can operate unpunished\n",
+				profile.Name.c_str(), enemy.c_str(), rec.AvgFocusShare * 100.0,
+				fair * 100.0, rec.HabitSamples);
+	}
 }
 
 void Distill::FoldAssociations(PlayerProfile& profile, int const houseIndex)

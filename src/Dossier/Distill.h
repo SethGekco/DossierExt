@@ -43,4 +43,9 @@ namespace Distill
 	// exploitable part — a player pouring everything into one opponent is not
 	// watching the others.
 	void ReportMatchupBias(PlayerProfile const& profile);
+
+	// What actually beats this player, per country: the share of their losses
+	// by killer type, plus any enemy country they demonstrably leave alone.
+	// Descriptive rather than a verdict, so it needs no baseline.
+	void ReportWeakness(PlayerProfile const& profile);
 }

@@ -65,7 +65,22 @@ DEFINE_HOOK(0x702D40, DossierExt_RegisterDestruction_Aggression, 0x5)
 	}
 
 	if (pVictim && pVictim->Owner)
-		++Observatory::Get(pVictim->Owner->ArrayIndex).LossesTaken;
+	{
+		auto& v = Observatory::Get(pVictim->Owner->ArrayIndex);
+		++v.LossesTaken;
+		// Weakness ledger: what type did the killing. Hostile kills only, so
+		// friendly fire and civilian accidents don't read as a counter.
+		if (pKiller && pKiller->Owner
+			&& !pKiller->Owner->IsAlliedWith(pVictim->Owner))
+		{
+			if (auto const pType = pKiller->GetTechnoType())
+				if (auto const pId = pType->get_ID())
+				{
+					++v.LostToType[pId];
+					++v.HostileLosses;
+				}
+		}
+	}
 
 	return 0;
 }

@@ -148,6 +148,7 @@ namespace
 
 		if (sub.empty()) AssignHabit(*pRec, key, value);
 		else if (sub == "UnitMix") pRec->UnitMix[key] = std::atof(value);
+		else if (sub == "LostTo") pRec->LostTo[key] = std::atof(value);
 		else if (sub == "Opening") pRec->Opening.push_back(value);
 		else if (sub == "Assoc")
 		{
@@ -328,6 +329,12 @@ bool Profile::Save(PlayerProfile& profile, const char* const lastOutcome)
 			std::fprintf(f, "[%s.UnitMix]\n", prefix.c_str());
 			for (auto const& [id, frac] : rec.UnitMix)
 				std::fprintf(f, "%s=%.3f\n", id.c_str(), frac);
+		}
+		if (!rec.LostTo.empty())
+		{
+			std::fprintf(f, "[%s.LostTo]\n", prefix.c_str());
+			for (auto const& [id, share] : rec.LostTo)
+				std::fprintf(f, "%s=%.3f\n", id.c_str(), share);
 		}
 		if (!rec.Opening.empty())
 		{

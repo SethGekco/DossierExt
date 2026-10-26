@@ -35,6 +35,8 @@ namespace
 			Distill::ReportTransfer(*pGlobal);
 			Distill::ReportSettingInfluence(*pGlobal);
 			Distill::ReportMatchupBias(*pGlobal);
+			Distill::ReportWeakness(named);
+			Distill::ReportWeakness(*pGlobal);
 		}
 	}
 

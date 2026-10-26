@@ -82,6 +82,10 @@ struct HouseObs
 	// fixates on Libya and ignores Korea", which is the exploitable part.
 	std::map<std::string, int> KillsByCountry;
 	int HostileKills = 0;          // denominator for focus share
+	// WHAT kills this house, by the killer's type ID. The most honest weakness
+	// signal available: purely empirical, no catalog of "what counters what".
+	std::map<std::string, int> LostToType;
+	int HostileLosses = 0;         // denominator for the loss shares
 
 	// Spatial habits — "where do they do things", bucketed "bx,by".
 	std::map<std::string, int> AttackGrid; // where this house kills enemies

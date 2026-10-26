@@ -34,6 +34,10 @@ struct HabitRecord
 	// made a 1v1 look like 99% "fixation" when there was nobody else to shoot.
 	double AvgEnemies = -1;
 	std::map<std::string, double> UnitMix; // folded composition fractions
+	// Weakness ledger: killer type ID -> folded share of this player's losses.
+	// Descriptive by construction ("38% of what he loses dies to APOC"), so it
+	// needs no baseline and cannot produce an always-true verdict.
+	std::map<std::string, double> LostTo;
 	std::vector<std::string> Opening;      // "frame:TypeID", most recent game
 	// Phase 3 learning: "Sign>Strategy" -> (times the sign fired, times the
 	// strategy was ALSO confirmed that game). Confidence = second/first.
