@@ -23,6 +23,38 @@ namespace
 
 	struct OreCell { CellStruct Loc; int Value; };
 
+	// ── Honest mode (DESIGN §5b) ─────────────────────────────────────────
+	// With DossierExt.Shrouded=no the Observatory may only read what the AI has
+	// legitimately revealed, so a Gap Generator genuinely blinds it.
+	//
+	// HYPOTHESIS, deliberately not asserted: CellClass::Visibility is a bitfield
+	// with one bit per house index (YRpp's own comment on it is "you don't wanna
+	// know... see 0x7F4194 and cry"). Three field-semantics guesses have already
+	// been wrong in this project, so the first survey logs a visible/total census
+	// per house: at match start a house should see only a patch around its base,
+	// and a census reporting ~100% visible would disprove this reading outright.
+	//
+	// HARD LIMIT: Visibility is a single char = 8 bits, so it cannot answer for
+	// house index >= 8. Rex runs PlayerCountExt with up to 30 houses, so those
+	// houses fall back to omniscient and say so rather than reading a bit that
+	// isn't there.
+	bool CanHouseSee(CellClass* const pCell, int const houseIndex)
+	{
+		if (houseIndex < 0 || houseIndex >= 8)
+			return true;   // unrepresentable; caller logs the fallback
+		return (static_cast<unsigned char>(pCell->Visibility) & (1u << houseIndex)) != 0;
+	}
+
+	// Does this house survey honestly, per the §5a difficulty dial?
+	bool HonestFor(HouseClass* const pHouse)
+	{
+		int const d = static_cast<int>(pHouse->AIDifficulty);
+		if (d < 0 || d > 2)
+			return false;
+		return !DossierConfig::Instance.Diff[d].Shrouded;
+	}
+	bool g_loggedVisCensus = false;
+
 	// Sweep the map once, collecting every cell that currently holds ore.
 	void CollectOre(std::vector<OreCell>& out)
 	{
@@ -47,6 +79,7 @@ namespace
 void Survey::Reset()
 {
 	g_lastSurveyFrame = -1;
+	g_loggedVisCensus = false;
 	g_fingerprint = MapFingerprint{};
 }
 
@@ -206,23 +239,52 @@ void Survey::MaybeRun()
 			continue;
 
 		auto& obs = Observatory::Get(i);
+		bool const honest = HonestFor(pHouse);
+		bool const blind = honest && i >= 8;   // 8-bit field can't answer
+		int visCells = 0;
+
 		double nearest = 1e9;
 		for (auto const& oc : ore)
 		{
+			// Honest mode: ore this house has never revealed does not exist as
+			// far as the dossier is concerned.
+			if (honest && !blind)
+			{
+				auto const pOreCell = map.TryGetCellAt(oc.Loc);
+				if (!pOreCell || !CanHouseSee(pOreCell, i))
+					continue;
+				++visCells;
+			}
 			double const d = base.DistanceFrom(oc.Loc); // in cells
 			if (d < nearest)
 				nearest = d;
 			if (d <= reach)
 				obs.OreReachable += oc.Value;
 		}
+
+		if (honest && !g_loggedVisCensus)
+		{
+			// The census that proves or disproves the Visibility reading.
+			g_loggedVisCensus = true;
+			Debug::Log("[DossierExt] honest-mode census %s#%d: %d of %u ore cell(s) "
+				"visible to this house%s — a figure near 100%% at match start would mean "
+				"CellClass::Visibility is NOT a per-house bitfield and this filter is wrong\n",
+				pHouse->get_ID(), i, visCells, ore.size(),
+				blind ? " (SKIPPED: house index >= 8, 8-bit field cannot answer; "
+				"falling back to omniscient)" : "");
+		}
+		else if (blind)
+			Debug::Log("[DossierExt] honest mode requested for %s#%d but house index >= 8 "
+				"exceeds the 8-bit Visibility field — surveying omniscient\n",
+				pHouse->get_ID(), i);
 		obs.OreNearest = (nearest < 1e9) ? static_cast<int>(nearest) : -1;
 		obs.SurveyInit = true;
 
-		Debug::Log("[DossierExt] survey %s#%d f%d: army=%lld bld=%lld techBldgs=%d(listed=%d civ=%d taken=%d) oreNearest=%dcell oreReach=%lld(r%d) structs=%u%s%s\n",
+		Debug::Log("[DossierExt] survey %s#%d f%d: army=%lld bld=%lld techBldgs=%d(listed=%d civ=%d taken=%d) oreNearest=%dcell oreReach=%lld(r%d) structs=%u [%s]%s%s\n",
 			pHouse->get_ID(), i, frame, obs.ArmyValue, obs.BuildingValue,
 			obs.TechBuildingsOwned, obs.TechListed, obs.TechCivilian, obs.TechCaptured,
 			obs.OreNearest, obs.OreReachable, reach,
-			obs.StructCounts.size(),
+			obs.StructCounts.size(), honest && !blind ? "honest" : "omniscient",
 			obs.TechDetail.empty() ? "" : " tech=", obs.TechDetail.c_str());
 	}
 
