@@ -250,7 +250,7 @@ void Survey::MaybeRun()
 			// far as the dossier is concerned.
 			if (honest && !blind)
 			{
-				auto const pOreCell = map.TryGetCellAt(oc.Loc);
+				auto const pOreCell = MapClass::Instance.TryGetCellAt(oc.Loc);
 				if (!pOreCell || !CanHouseSee(pOreCell, i))
 					continue;
 				++visCells;
