@@ -8,7 +8,7 @@ verified in-game. Phase 4 is **half** built. Phase 5 is untouched.
 
 ---
 
-## 1. Honest-mode shroud filter — the `Shrouded` dial is a no-op
+## 1. ~~Honest-mode shroud filter~~ — DONE 2026-10-25 (hypothesis needs log check)
 `DossierExt.Shrouded=` is parsed and logged, and **nothing consults it**. The
 Observatory surveys the whole map omnisciently on every difficulty, so
 `Shrouded=no` under `[Easy]` promises honesty and does not deliver it, and Gap
@@ -22,7 +22,7 @@ Blocked on research, not effort: needs a **per-house, synced** visibility read.
 field; neither is a per-house answer. Resolve via the hook encyclopedia /
 registry before writing code, and confirm the read is sync-safe.
 
-## 2. Attack-window planner (actuator #2)
+## 2. ~~Attack-window planner~~ — DONE 2026-10-25 (untested in-game)
 The headline promise of the original brief: *"plan an attack that's too
 expensive to counter."* Not built. The inputs all exist already — the economy
 ledger knows the player's float, income and spend; the Scoreboard knows standing;
