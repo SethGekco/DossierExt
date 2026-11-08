@@ -11,6 +11,8 @@
 #include "Dossier/MatchSettings.h"
 #include "Dossier/AttackWindow.h"
 #include "Dossier/SellWatch.h"
+#include "Dossier/Opening.h"
+#include "Dossier/Tape.h"
 
 #include <HouseClass.h>
 #include <Unsorted.h>
@@ -138,6 +140,7 @@ void Engine::TickHouse(HouseClass* const pHouse)
 	if (!pHouse->IsObserver() && !pHouse->IsNeutral())
 	{
 		SellWatch::Tick(pHouse);   // diagnostic: who liquidates an AI base
+		Opening::Tick(pHouse);     // L1a: every house's first minutes, graded at marks
 		Economy::Sample(pHouse);
 		Scoreboard::Evaluate(pHouse);
 		Signs::Evaluate(pHouse);   // Phase 3: tells + ground truth, log-only
@@ -180,6 +183,8 @@ void Engine::TickHouse(HouseClass* const pHouse)
 				}
 		}
 		Profile::CheckpointAll();
+		Opening::Save("checkpoint");
+		Tape::Summary();
 	}
 }
 

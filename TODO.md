@@ -60,9 +60,16 @@ Per `[[hook-encyclopedia-workflow]]` this is owed after live verification.
 
 ## 9. Learn from the player: playbooks, micro, post-mortems (Rex 2026-11-08)
 Full design in `DESIGN.md` §10. Build order:
-- **L1 tactics tape** — hook 0x4C6CB0 (`EventClass::RespondToEvent` entry,
-  6 bytes, unhooked), capture human orders + Produce/Place/Sell. Log-only.
-  Closes item 6 (per-unit production) as a side effect.
+- ~~**L1a opening book**~~ — BUILT 2026-11-08 (untested in-game): every
+  house's first minutes graded at marks, prefix tree in `_Openings.ini`.
+- ~~**L1b tactics tape**~~ — BUILT 2026-11-08 (untested in-game): hook 0x4C6CB0,
+  human orders with their situation, log + counts. Not folded into profiles
+  yet; item 6 (per-unit production) gets its human half from the Produce
+  events once it is.
+- **L1c no-full-game sweep** — every remaining "only at game end" path
+  (post-mortems included) must close and save within its own window.
+- **Opening replay** — find the seat where an AI picks its next structure,
+  then let a Hard AI follow the book's best line (gated, single-human only).
 - **L2 technique detectors** — kite, focus fire, pull-back, spread, out-range a
   defense, harvester snipe, drop/flank, plus the free-damage catch-all.
   Log-only, so Rex can grade "kite x7: 3 MTNK vs HTNK, dealt 1200 took 0".

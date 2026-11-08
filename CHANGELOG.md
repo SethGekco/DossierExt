@@ -13,7 +13,45 @@
 
 ## [unreleased] — 2026-11-08
 
-### Designed — learning from the player (DESIGN §10, TODO 9; no code yet)
+### Added — L1a opening book + L1b tactics tape (DESIGN §10c/§10d; record/log only)
+- Why: Rex wants the AI to learn from everything the player does, keep what
+  works for similar situations, keep what fails as things to avoid and
+  counter, merge overlapping records, and learn **without full games**. Rex
+  tests DLLs all day, so even short test games should teach the AI to be in
+  peak form in its first 60 seconds.
+- Found while designing it: nothing learned in a game survived a quit before
+  the first checkpoint (default f3000; rulesmd has 1500). `0x685659` only
+  resets, and under the spawner each match is its own process, so it fires at
+  the next game's start, after ClearScenario has destroyed the objects. The
+  structure tape also polled only every SurveyPeriod (900 frames), far too
+  coarse for an opening.
+- **Opening book** (`Opening.cpp`, `[Dossier.Openings]`): every house, AI
+  and human alike. Build tape = diff of `FactoryProducedBuildingTypes` every
+  `Tick`=15 frames (a lifetime counter that never decreases, so captures
+  don't count; read through the const overload so we never grow the engine's
+  vector; walls skipped). Graded at `Marks`=600..9000: tempo = spent so far +
+  income rate × `Horizon` − `LowPowerPenalty`. Each mark is logged
+  (`opening <house> [<ctx>] f600: tempo ...`) and saved on the next tick, so a
+  game quit at f1300 still keeps marks 600 and 1200.
+  `DossierProfiles/_Openings.ini` is a prefix tree per context (side × start
+  credits × Human/AIHard/AINormal/AIEasy). Openings that share a start share
+  stored nodes, a mark only counts for nodes built before it, and leaves with
+  the least evidence are evicted past `MaxNodes`. Saves rewind to the loaded
+  baseline (no double count) and write through `.tmp` + rename. At game start
+  `BOOK <ctx>: ... Best line: ...` gives the best-evidenced line from history.
+- **Tactics tape** (`Tape.cpp`, `[Dossier.Tape]`): new hook **0x4C6CB0**
+  `EventClass::RespondToEvent` entry (6 bytes `sub esp,0x370`, unhooked by
+  the registry and every ~/Claude/*/src). Human orders only (move, attack,
+  stop, deploy, produce, place, sell, ...). MegaMission lines carry the unit,
+  mission, target (own/ally/foe), destination, distance, both weapon ranges,
+  health and `RearmTimer`, the raw material for kiting cases. Every order is
+  counted, and per-house totals are logged at checkpoints. The first
+  `LogLines`=150 per match are written out.
+- Nothing acts on either yet. Hooks: 7 (overlap + bounds checks clean against
+  the registry and gamemd-spawn.exe).
+
+
+### Designed — learning from the player (DESIGN §10, TODO 9)
 - Why: Rex asked for the AI to copy the player's strategies that work, learn
   micro (kiting) and the exploits humans use, and write a post-mortem when a
   strategy it trusted gets beaten (how it was beaten, its shortcomings) so it

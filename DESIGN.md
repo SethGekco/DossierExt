@@ -344,7 +344,7 @@ that system deliberately does NOT do, and lands here instead.
 3. Scoreboard formula weights (army vs economy vs territory) — start with
    equal thirds, calibrate from Phase 1 logs.
 
-## 10. Learning from the player: playbooks, micro, post-mortems (Rex 2026-11-08)
+## 10. Learning from the player: cases, openings, micro, post-mortems (Rex 2026-11-08)
 
 > Rex: *"make AI learn from player what strategies work and try them. Include
 > complex player movements so the AI can learn how to kite units or exploit
@@ -352,23 +352,74 @@ that system deliberately does NOT do, and lands here instead.
 > strategy and it's defeated, have it document how to defeat the strategy as
 > well document the strategy's short comings to try and make it work in the
 > future with what it learns."*
+>
+> *"Allow the AI to document anything the player does and if it works, save
+> all the details and try to replicate that maneuver or strategy in the
+> spectrum of similar circumstance. When it doesn't work, document to avoid
+> that and to counter it later. As it finds overlaps, it will hopefully know
+> how to smush those ideas together as one to save disk space."*
+>
+> *"Make sure it doesn't require a full game to finish either. [...] it'd be
+> neat if AI learned in this time how to be peak form in the first 60 seconds
+> it plays."*
 
-### 10a. What is and isn't learnable (be honest about this up front)
+### 10a. The unit of learning: a case
 
-- **Learnable:** *which* technique the player uses, *when*, *with which unit
-  pairs*, *on which maps/zones*, *with which parameters* (standoff distance,
-  retreat step, timing), and *whether it worked*. The same for macro: opening,
-  unit mix, timing, lane, tech path, and the outcome of each attack.
-- **Not learnable from clicks alone:** a brand-new behaviour. The engine has no
-  way to turn "the human clicked here, then there" into executable micro for a
-  trick nobody wrote an executor for. Each technique gets a hand-written
-  executor **once**; after that it is entirely data-driven from the player.
-- **Exploits the vocabulary doesn't name** are still *noticed*: the
-  free-damage catch-all (10c) logs any exchange the player wins lopsidedly,
-  with full context, so it can be named later (by Rex, or the TODO-LAST
-  offline tool) and given an executor. The AI never executes an unnamed trick.
+Everything below stores one shape: **situation → action → outcome**.
 
-### 10b. L1 — the tactics tape (recorder; passive, MP-safe)
+- **Situation** — quantized features, never raw names where a role will do:
+  own unit's range/speed/armor class vs the target's, health fractions, local
+  numbers, reload state, distance to own base, splash present, target static;
+  for macro, side, start credits, controller, frame.
+- **Action** — what was done, in a form the AI can re-issue (10e).
+- **Outcome** — graded inside the case's own window (seconds), never "did the
+  match end in a win".
+
+**Works →** kept as a positive case and replayed wherever the current
+situation falls inside the case's ranges (the "spectrum of similar
+circumstance"). **Fails →** kept as a negative case: it vetoes the replay in
+that region (avoid), and *what beat it* is recorded beside it (counter).
+
+**Merging (the smush).** Cases with the same action whose situations overlap
+merge into one prototype: feature ranges widen to cover both, counts add. A
+merge that would mix wins and losses is refused, and that refusal is
+information: the border between a working prototype and a failing one *is*
+the strategy's shortcoming (10g). Sequences merge as a prefix tree, so shared
+openings and shared order chains are stored once. Per-scope caps evict the
+least-evidenced leaves.
+
+### 10b. No full game needed
+
+- Every case closes and is graded within its own window, and is saved at
+  marks and checkpoints. Saves rewind to the on-disk baseline and re-add this
+  match (the fold's rule), so saving often is free and never double-counts.
+- Under the CnCNet spawner each match is its own process: `0x685659`
+  (ClearScenario, which is where Reset runs) fires at the *next* game's start,
+  at the end of ClearScenario after the objects are destroyed. So nothing may
+  wait for an ending. A quit loses at most the time since the last mark.
+
+### 10c. Openings: peak form in the first 60 seconds (L1a — BUILT 2026-11-08)
+
+- Every house, **AI and human**, is recorded, so each of Rex's test games
+  teaches whatever DLL it was testing. Context = side × start credits ×
+  controller (Human / AIHard / AINormal / AIEasy).
+- Build tape from `FactoryProduced{Building,Unit,Infantry,Aircraft}Types`: a
+  lifetime counter that never decreases (PrerequisiteExt relies on that for
+  build limits), so it's exactly "what this house built", captures excluded.
+  It's diffed every `Tick` frames, but only when the counter's Total moved.
+  Walls are skipped.
+- Graded at marks (default f600..f9000): **tempo = spent so far + income
+  rate × Horizon − low-power penalty**. Components are logged, so the weights
+  can be judged. A game quit at f1500 still grades marks 600 and 1200.
+- `DossierProfiles/_Openings.ini`: a prefix tree of structure sequences per
+  context; each node holds games, human games, mean frame, and per-mark tempo
+  sums. At game start the book's best line per context is logged ("BOOK
+  ..."). Greedy descent picks, at each step, the child with the best mean
+  tempo at the deepest mark with `MinSamples` games.
+- Acting on it (making an AI build the best line) is L5: the seat that picks
+  an AI's next structure has not been researched yet.
+
+### 10d. Tactics tape: every order the player gives (L1b — BUILT 2026-11-08)
 
 - **Seat:** `EventClass::RespondToEvent` entry **0x4C6CB0** (`sub esp,0x370`,
   6 bytes, no rel32). Nobody hooks the entry: CnCNet-Spawner / Phobos /
@@ -377,92 +428,73 @@ that system deliberately does NOT do, and lands here instead.
   event: `Type` +0, `HouseIndex` +2, `Frame` +3, payload +7.
 - It executes on **every client at the same frame**, so the tape is synced
   data — unlike a click hook (`*_ClickedAction`), which is local UI.
-- Captured for human houses: `MegaMission`/`MegaMissionF` (Whom, Mission,
-  Target, Destination, Follow — the actual order), `Idle` (stop),
-  `Scatter`, `Deploy`, `Produce` (queue click — **this closes TODO 6**, the
-  per-unit production tape), `Abandon`, `Place`, `Sell`.
-- Per order, snapshot the unit: cell, health, `RearmTimer` (is it
-  reloading?), distance to target, own weapon range vs target's weapon range,
-  speeds. Kept in a per-unit ring, resolved by `TargetClass`, never by stored
-  pointer.
+- Human houses only (AIs issue no events). Per order: unit, mission, target,
+  distance, own range vs the target's range, health, `RearmTimer`. Counts per
+  event type are kept; the first `LogLines` orders per match are logged.
+  Resolved through `TargetClass::As_*`, never by stored pointer.
 
-### 10c. L2 — technique detectors (fixed vocabulary, thresholds in INI)
+### 10e. Micro cases: replay what the player did, not only what we named
 
-`[Dossier.Techniques]` catalog, each a detector over the tape:
+- An order chain is stored in the **unit's own frame**: "move 4 cells
+  directly away from my target while reloading, then attack it again" rather
+  than "move to cell 112,87". Re-anchored to an AI unit's own target, the same
+  chain replays anywhere the situation matches, so the AI can reproduce a
+  maneuver nobody wrote a detector for.
+- Named detectors (kite, focus fire, pull-back, spread, out-range a defense,
+  harvester snipe, drop/flank) become **labels** on cases, for the log and the
+  post-mortems, not the only things that can be learned.
+- **Free-damage catch-all:** any exchange the player wins by ≥ X:1 over a
+  window becomes a candidate case even if its chain looks like nothing known.
+- **Honest limits:** replay re-issues the order kinds a player can issue
+  (move, attack, attack-move, stop, guard, deploy). Long multi-group
+  maneuvers degrade, and the AI never knows *why* a chain works; the grader
+  keeps only chains that keep winning in their region.
 
-| Technique | Signature on the tape |
-|---|---|
-| Kite | Attack T → Move *away from T* issued while `RearmTimer` runs → Attack T again; own range > T's, or own speed > T's |
-| Focus fire | ≥N units ordered onto the same target within K frames |
-| Pull-back | damaged unit ordered out of the fight (toward repair / base) |
-| Spread | a clump dispersed by move orders while the enemy has splash |
-| Out-range a defense | player unit damages a static defense from beyond its range (the classic "AI never answers artillery") |
-| Harvester snipe | orders that target harvesters away from their escort |
-| Drop / flank | transport unload inside the enemy base, or attack from a bucket the AI has never been hit from |
-| **Free damage (catch-all)** | any exchange where damage dealt ≥ X × damage received over a window, whether or not a detector named it |
-
-Grading is per **engagement**, not per match: damage dealt vs received across
-the technique's window, from health snapshots at the order events plus the
-existing 0x702D40 kill seat. Matches with a verdict add weight; abandoned ones
-still teach (the same rule as the fold).
-
-### 10d. L3 — the playbook (macro imitation)
+### 10f. Macro playbook
 
 - A player strategy = the fingerprint the Dossier already keeps (opening tape,
-  unit mix, Attack/Rush grids, timing) plus the L1 Produce tape.
+  unit mix, Attack/Rush grids, timing) plus the L1 tapes.
 - "Works" = attack-wave outcome: value destroyed vs value lost in a window
   after the wave starts, plus the Scoreboard tier shift it caused.
-- Stored as `[Playbook.<id>]` (Source, Opening, Mix, Timing, Lane, Plays,
-  Wins, Confidence) per player × country, Overall as fallback.
 - **Execution respects §6.4** (DossierExt does not dispatch teams): the wave
-  tool emits TeamTypes/TaskForces from playbook entries offline, then the
-  Actuator enables/weights them in-game. DoctrineExt's procedural team pool
-  is the alternative route if a runtime composition is needed.
+  tool emits TeamTypes/TaskForces from playbook entries, then the Actuator
+  enables/weights them in-game.
 
-### 10e. L4 — confidence and the post-mortem
+### 10g. Confidence and the post-mortem
 
-- The AI keeps its **own** track record per playbook entry and per aimd
-  trigger (this absorbs TODO 4): tries and engagement outcomes.
-- *Confident* = Wilson lower bound ≥ `ConfidentAt` with ≥ `MinTries`.
-- When a confident strategy **fails** (the wave loses its engagement, or the
-  match is lost while it is the active plan), write a post-mortem:
-  - **How it was beaten:** killer types of this wave's losses (the Weakness
-    ledger, scoped to the wave), where (bucket/zone), when (frame vs the
-    strategy's usual timing), the opponent's state (Scoreboard, float), and
-    any tech/unit present now that was absent in the strategy's wins (the new
-    counter). Plus the phase that broke: muster, travel, engagement, sustain.
-  - **Shortcomings:** conditions that separate its wins from its losses,
-    written as Signs-grammar predicates ("fails when Enemy has GAPILL before
-    f9000") so the existing evaluator can read them.
-  - **Refinements:** a *guard* (don't launch while a shortcoming predicate
-    holds) and *amendments* (add the counter-to-the-counter, shift timing,
-    change lane). Each amendment is a new variant id graded by the same
-    association counting — the fitness function that already exists.
-- Written twice: human-readable `DossierProfiles/Playbook/<id>.txt` (Rex
-  asked for it to be *documented*) and the machine INI section.
-- **The symmetry worth having:** a post-mortem of how the player beat a
-  strategy the AI copied *from* the player is exactly the recipe for beating
-  the player when *they* run it. Both directions feed the same record.
+- The AI keeps its **own** track record per case, playbook entry and aimd
+  trigger (absorbs TODO 4). *Confident* = Wilson lower bound ≥ `ConfidentAt`
+  with ≥ `MinTries`.
+- When a confident case fails, write a post-mortem:
+  - **How it was beaten:** killer types of the losses (the Weakness ledger,
+    scoped to the case), where, when vs the usual timing, the opponent's
+    state, and anything present now that was absent in the case's wins (the
+    new counter). Plus which phase broke: muster, travel, engagement, sustain.
+  - **Shortcomings:** the features that separate its wins from its losses (the
+    refused-merge border of 10a), written as Signs-grammar predicates so the
+    existing evaluator can read them.
+  - **Refinements:** a guard (don't run while a shortcoming holds) and
+    amendments (counter-the-counter, timing, lane), each a variant graded by
+    the association counting that already exists.
+- Written as human-readable `DossierProfiles/Playbook/<id>.txt` plus the
+  machine INI section.
+- **Symmetry:** how the player beat a case the AI copied *from* the player is
+  the recipe for beating the player when *they* run it.
 
-### 10f. L5 — execution (gated like every actuator)
+### 10h. Execution (gated like every actuator)
 
-- **Micro executors live in DoctrineExt** ("play the game well", per-battle):
-  kite / focus / pull-back / out-range / spread, each reading DossierExt's
-  technique table (unit pair → parameters, success rate) through an exported
-  API, the WarZoneExt pattern. Handoff, not a cross-repo edit: another session
-  owns DoctrineExt.
-- Macro playbooks go through the Actuator (aimd emission + enable/weight).
+- Micro replay lives in DoctrineExt ("play the game well", per battle),
+  reading DossierExt's cases through an exported API, the WarZoneExt pattern.
+  Handoff, not a cross-repo edit: another session owns DoctrineExt.
+- Opening replay needs the AI's structure-choice seat (unresearched).
 - Gates: `[Dossier.Actuation] Enabled=`, the MP refusal, an `Unlock=` tier per
-  lever, and per-difficulty `DossierExt.Imitate=` / `DossierExt.Micro=` so Easy
-  can stay plain.
+  lever, and per-difficulty `DossierExt.Imitate=` / `DossierExt.Micro=`.
 
-### 10g. Constraints specific to this section
+### 10i. Constraints specific to this section
 
-- Recording is synced, so it runs in MP. **Acting** on it reads local files,
-  so it is single-human only (§7) — micro included.
-- No LLM in the match loop; the TODO-LAST tool may *name* free-damage
-  exploits offline, and the grader decides whether they stay.
-- The event hook sees every event: filter on `Type` and house before doing
-  anything else.
-- The tape and the per-match technique state are not savegame-serialized
-  (same known limitation as the rest of the Observatory).
+- Recording is synced or file-only, so it runs in MP. **Acting** on it reads
+  local files, so it is single-human only (§7).
+- No LLM in the match loop. The TODO-LAST tool may *name* free-damage cases
+  offline; the grader decides whether they stay.
+- The event hook sees every event: filter on `Type` and house first.
+- Not savegame-serialized (same known limitation as the Observatory).

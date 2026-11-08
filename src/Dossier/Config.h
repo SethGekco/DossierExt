@@ -2,6 +2,7 @@
 
 #include <set>
 #include <string>
+#include <vector>
 
 // Parsed [Dossier.*] config + the per-difficulty DossierExt.* keys from the
 // vanilla rules difficulty sections ([Easy]/[Normal]/[Difficult]).
@@ -87,6 +88,22 @@ struct DossierConfig
 	double WindowAffordRatio = 0.6;  // they must field >=60% of our strike value
 	int WindowMinArmy = 20000;       // below this we have nothing to exploit with
 	double WindowHysteresis = 0.15;  // slack to STAY open, so it can't flicker
+
+	// L1a — [Dossier.Openings] (DESIGN §10c). Every house's first minutes,
+	// graded at marks, so a test game quit after 30 seconds still teaches.
+	bool OpeningsEnabled = true;
+	int OpeningTick = 15;                    // frames between build-counter diffs
+	std::vector<int> OpeningMarks { 600, 1200, 1800, 2400, 3000, 3600, 5400, 9000 };
+	int OpeningDepth = 16;                   // structures kept per opening line
+	int OpeningHorizon = 1800;               // frames of income a working economy is worth
+	int OpeningLowPowerPenalty = 1000;       // tempo lost when low power at a mark
+	int OpeningMinSamples = 2;               // games before a branch can be preferred
+	int OpeningMaxNodes = 400;               // prefix-tree nodes kept per context
+	bool OpeningLog = true;                  // per-house mark lines
+
+	// L1b — [Dossier.Tape] (DESIGN §10d): every order a human gives.
+	bool TapeEnabled = true;
+	int TapeLogLines = 150;                  // orders logged per match (all are counted)
 
 	// Phase 2.2 — does a strategy TRANSFER across maps/countries?
 	bool TransferReport = true;

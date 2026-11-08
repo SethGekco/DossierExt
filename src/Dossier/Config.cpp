@@ -13,10 +13,16 @@
 #include "Dossier/Actuator.h"
 #include "Dossier/AttackWindow.h"
 #include "Dossier/SellWatch.h"
+#include "Dossier/Opening.h"
+#include "Dossier/Tape.h"
 
 #include <CCINIClass.h>
 #include <Utilities/Debug.h>
 #include <Utilities/Macro.h>
+
+#include <algorithm>
+#include <cstdlib>
+#include <cstring>
 
 DossierConfig DossierConfig::Instance;
 
@@ -141,6 +147,41 @@ void DossierConfig::EnsureParsed()
 		"AffordRatio=%.2f MinArmy=%d Hysteresis=%.2f\n",
 		cfg.WindowEnabled, cfg.WindowPeriod, cfg.WindowHorizon, cfg.WindowAffordRatio,
 		cfg.WindowMinArmy, cfg.WindowHysteresis);
+
+	// ─── [Dossier.Openings] / [Dossier.Tape] — learning without full games ─
+	cfg.OpeningsEnabled = pINI->ReadBool("Dossier.Openings", "Enabled", cfg.OpeningsEnabled);
+	cfg.OpeningTick = std::max(1, pINI->ReadInteger("Dossier.Openings", "Tick", cfg.OpeningTick));
+	if (pINI->ReadString("Dossier.Openings", "Marks", "", buf, sizeof(buf)) > 0)
+	{
+		std::vector<int> marks;
+		for (char* tok = std::strtok(buf, ","); tok; tok = std::strtok(nullptr, ","))
+			if (int const m = std::atoi(tok); m > 0 && (marks.empty() || m > marks.back()))
+				marks.push_back(m);
+		if (!marks.empty())
+			cfg.OpeningMarks = marks;
+		else
+			Debug::Log("[DossierExt] WARNING: [Dossier.Openings] Marks= has no ascending "
+				"positive frames; keeping the defaults.\n");
+	}
+	cfg.OpeningDepth = pINI->ReadInteger("Dossier.Openings", "Depth", cfg.OpeningDepth);
+	cfg.OpeningHorizon = pINI->ReadInteger("Dossier.Openings", "Horizon", cfg.OpeningHorizon);
+	cfg.OpeningLowPowerPenalty = pINI->ReadInteger("Dossier.Openings", "LowPowerPenalty", cfg.OpeningLowPowerPenalty);
+	cfg.OpeningMinSamples = std::max(1, pINI->ReadInteger("Dossier.Openings", "MinSamples", cfg.OpeningMinSamples));
+	cfg.OpeningMaxNodes = pINI->ReadInteger("Dossier.Openings", "MaxNodes", cfg.OpeningMaxNodes);
+	cfg.OpeningLog = pINI->ReadBool("Dossier.Openings", "Log", cfg.OpeningLog);
+	cfg.TapeEnabled = pINI->ReadBool("Dossier.Tape", "Enabled", cfg.TapeEnabled);
+	cfg.TapeLogLines = pINI->ReadInteger("Dossier.Tape", "LogLines", cfg.TapeLogLines);
+	{
+		std::string marks;
+		for (int const m : cfg.OpeningMarks)
+			marks += (marks.empty() ? "" : ",") + std::to_string(m);
+		Debug::Log("[DossierExt] [Dossier.Openings]: Enabled=%d Tick=%d Marks=%s Depth=%d "
+			"Horizon=%d LowPowerPenalty=%d MinSamples=%d MaxNodes=%d Log=%d | "
+			"[Dossier.Tape]: Enabled=%d LogLines=%d\n",
+			cfg.OpeningsEnabled, cfg.OpeningTick, marks.c_str(), cfg.OpeningDepth,
+			cfg.OpeningHorizon, cfg.OpeningLowPowerPenalty, cfg.OpeningMinSamples,
+			cfg.OpeningMaxNodes, cfg.OpeningLog, cfg.TapeEnabled, cfg.TapeLogLines);
+	}
 	cfg.TransferMinGames = pINI->ReadInteger("Dossier.Records", "TransferMinGames", cfg.TransferMinGames);
 	cfg.TransferThreshold = pINI->ReadDouble("Dossier.Records", "TransferThreshold", cfg.TransferThreshold);
 	cfg.MapSimilarThreshold = pINI->ReadDouble("Dossier.Records", "MapSimilarThreshold", cfg.MapSimilarThreshold);
@@ -227,6 +268,8 @@ DEFINE_HOOK(0x685659, DossierExt_Scenario_ClearClasses, 0xA)
 	Signs::Reset();
 	MatchSettings::Reset();
 	SellWatch::Reset();
+	Opening::Reset();
+	Tape::Reset();
 	// Put any trigger flags back BEFORE wiping our record of them.
 	Actuator::RestoreAll();
 	Actuator::Reset();
