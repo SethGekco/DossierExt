@@ -36,7 +36,9 @@
   `DossierProfiles/_Openings.ini` is a prefix tree per context (side × start
   credits × Human/AIHard/AINormal/AIEasy). Openings that share a start share
   stored nodes, a mark only counts for nodes built before it, and leaves with
-  the least evidence are evicted past `MaxNodes`. Saves rewind to the loaded
+  the least evidence are evicted past `MaxNodes`. A house that built no
+  structure is not graded (an idle slot in an unattended test, or a player
+  only watching, is not an opening). Saves rewind to the loaded
   baseline (no double count) and write through `.tmp` + rename. At game start
   `BOOK <ctx>: ... Best line: ...` gives the best-evidenced line from history.
 - **Tactics tape** (`Tape.cpp`, `[Dossier.Tape]`): new hook **0x4C6CB0**

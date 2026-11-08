@@ -290,7 +290,10 @@ namespace
 		for (auto const& entry : g_houses)
 		{
 			auto const& h = entry.second;
-			if (!h.Counts || h.Tempo.empty())
+			// A house that built nothing was idle (an unattended test slot, a
+			// player only watching), not playing an opening: grading it would
+			// drag every context's baseline toward zero.
+			if (!h.Counts || h.Tempo.empty() || h.Seq.empty())
 				continue;
 			auto& tree = book[h.Context];
 			auto add = [&](std::string const& key, int const frameAt)
@@ -460,7 +463,7 @@ void Opening::Tick(HouseClass* const pHouse)
 				" | money %d | %s\n",
 				pHouse->get_ID(), pHouse->ArrayIndex, h.Context.c_str(), mark, tempo, spentSoFar,
 				rate, cfg.OpeningHorizon, lowPower ? " - LOW POWER" : "", money,
-				line.empty() ? "(nothing built)" : line.c_str());
+				line.empty() ? "(nothing built: idle, not graded)" : line.c_str());
 		}
 	}
 }
@@ -517,7 +520,7 @@ void Opening::Save(const char* const why)
 
 	int graded = 0;
 	for (auto const& [idx, h] : g_houses)
-		if (h.Counts && !h.Tempo.empty())
+		if (h.Counts && !h.Tempo.empty() && !h.Seq.empty())
 			++graded;
 	Debug::Log("[DossierExt] opening book saved (%s, f%d): %u contexts, %d nodes, %d houses graded "
 		"this match.\n", why, Unsorted::CurrentFrame, book.size(), nodes, graded);
