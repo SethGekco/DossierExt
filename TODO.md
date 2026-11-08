@@ -58,9 +58,25 @@ and have never been calibrated against real logs.
 5 seats, all shared/already-proven, still not contributed back.
 Per `[[hook-encyclopedia-workflow]]` this is owed after live verification.
 
+## 9. Learn from the player: playbooks, micro, post-mortems (Rex 2026-11-08)
+Full design in `DESIGN.md` §10. Build order:
+- **L1 tactics tape** — hook 0x4C6CB0 (`EventClass::RespondToEvent` entry,
+  6 bytes, unhooked), capture human orders + Produce/Place/Sell. Log-only.
+  Closes item 6 (per-unit production) as a side effect.
+- **L2 technique detectors** — kite, focus fire, pull-back, spread, out-range a
+  defense, harvester snipe, drop/flank, plus the free-damage catch-all.
+  Log-only, so Rex can grade "kite x7: 3 MTNK vs HTNK, dealt 1200 took 0".
+- **L3 playbook** — persist techniques per unit pair and macro strategies per
+  player × country, graded per engagement.
+- **L4 confidence + post-mortems** — the AI's own track record (absorbs item 4);
+  on a confident strategy's defeat, write how it was beaten, its shortcomings
+  as Signs predicates, and guard/amendment variants.
+- **L5 execution** — micro executors in DoctrineExt (handoff), macro through
+  the Actuator; all gated, single-human only.
+
 ---
 
-## 9. LAST — LLM companion tool (Rex: revisit when the above is done)
+## 10. LAST — LLM companion tool (Rex: revisit when the above is done)
 **A tool, deliberately not an extension**, because nothing about it belongs
 in-process. An LLM must never sit in the match loop: it is nondeterministic and
 YR is lockstep, so a decision source that can differ between clients desyncs the

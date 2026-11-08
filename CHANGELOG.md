@@ -11,6 +11,36 @@
 > treats its exported API, its zone **names**, and its on-disk format as
 > contracts — read its CHANGELOG before assuming any of them.
 
+## [unreleased] — 2026-11-08
+
+### Designed — learning from the player (DESIGN §10, TODO 9; no code yet)
+- Why: Rex asked for the AI to copy the player's strategies that work, learn
+  micro (kiting) and the exploits humans use, and write a post-mortem when a
+  strategy it trusted gets beaten (how it was beaten, its shortcomings) so it
+  can come back better.
+- Recorder seat chosen and checked: `EventClass::RespondToEvent` entry
+  **0x4C6CB0** (`sub esp,0x370`, 6 bytes). Not hooked by anything in the
+  registry or any ~/Claude/*/src; the neighbours are 0x4C6CC8 (CnCNet-Spawner,
+  Phobos, AggressiveStance), 0x4C6CCD (Ares/Antares) and 0x4C6CF0 (Phobos). It
+  runs on every client at the same frame, so the tape is synced data.
+- Honest limit recorded in the design: the AI learns *which* named technique
+  works, where and with what parameters; it cannot invent new micro from
+  clicks. Unnamed lopsided exchanges are logged by a free-damage catch-all so
+  they can be named later.
+- Boundary kept: micro executors belong in DoctrineExt (handoff, not a
+  cross-repo edit), macro playbooks go through the Actuator. Old TODO 9 (LLM
+  tool) is now 10 and still LAST.
+
+### Note — SellWatch
+- Rex 2026-11-08: DoctrineExt does fire-sale-related things on purpose. A
+  `FIRESALE ... called from DoctrineExt.dll+...` line is expected, not a bug.
+- Through the 11-08 13:29 log there were **no** Fire_Sale calls in the last 40
+  logs. The AI sales are one building at a time (1-9 per house, GACNST
+  included, full HP), mostly with money near 0 (AIMode 1), but one ConYard
+  went at 4,566 credits in AIMode 0, so low cash is not the whole story.
+  Sales via a Sell mission bypass Fire_Sale, so SellWatch cannot name who
+  ordered those. `[Dossier.General] SellWatch=no` silences it.
+
 ## [unreleased] — 2026-10-26
 
 ### Added — SellWatch (diagnostic, log-only, `[Dossier.General] SellWatch=yes`)
