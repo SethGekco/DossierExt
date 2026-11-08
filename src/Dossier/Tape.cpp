@@ -5,6 +5,10 @@
 #include <HouseClass.h>
 #include <TechnoClass.h>
 #include <TechnoTypeClass.h>
+#include <BuildingTypeClass.h>
+#include <UnitTypeClass.h>
+#include <InfantryTypeClass.h>
+#include <AircraftTypeClass.h>
 #include <CellClass.h>
 #include <Unsorted.h>
 #include <Utilities/Debug.h>
@@ -62,6 +66,33 @@ namespace
 			return true;
 		default:
 			return false;
+		}
+	}
+
+	// Bounds-checked type lookup. The engine's GetByTypeAndIndex (0x48DCD0)
+	// indexes the type array blindly, and a PLACE can carry HeapID -1:
+	// HouseClass::Place (0x4FB0E0) guards `heap < 0` itself because it takes
+	// the building from the house's factory, not from the event. Trusting the
+	// engine helper read array[-1], printed a garbage name and crashed Rex's
+	// game (2026-11-08, a placement right after queuing dogs).
+	TechnoTypeClass* TypeOf(AbstractType const rtti, int const heap)
+	{
+		switch (rtti)
+		{
+		case AbstractType::Unit:
+		case AbstractType::UnitType:
+			return UnitTypeClass::Array.GetItemOrDefault(heap);
+		case AbstractType::Aircraft:
+		case AbstractType::AircraftType:
+			return AircraftTypeClass::Array.GetItemOrDefault(heap);
+		case AbstractType::Building:
+		case AbstractType::BuildingType:
+			return BuildingTypeClass::Array.GetItemOrDefault(heap);
+		case AbstractType::Infantry:
+		case AbstractType::InfantryType:
+			return InfantryTypeClass::Array.GetItemOrDefault(heap);
+		default:
+			return nullptr;
 		}
 	}
 
@@ -149,14 +180,19 @@ namespace
 				? pEvent->Produce.RTTIType : pEvent->Place.RTTIType;
 			int const heap = pEvent->Type == EventType::Produce
 				? pEvent->Produce.HeapID : pEvent->Place.HeapID;
-			auto const pType = TechnoTypeClass::GetByTypeAndIndex(rtti, heap);
+			auto const pType = TypeOf(rtti, heap);
+			char what[48];
+			if (pType)
+				std::snprintf(what, sizeof(what), "%s", pType->get_ID());
+			else
+				std::snprintf(what, sizeof(what), "?(rtti %d heap %d)", static_cast<int>(rtti), heap);
 			char where[32] = "";
 			if (pEvent->Type == EventType::Place)
 				std::snprintf(where, sizeof(where), " at %d,%d",
 					pEvent->Place.Location.X, pEvent->Place.Location.Y);
 			Debug::Log("[DossierExt] tape %s#%d f%u: %s %s%s\n",
 				pHouse->get_ID(), pHouse->ArrayIndex, pEvent->Frame, EventName(static_cast<int>(pEvent->Type)),
-				pType ? pType->get_ID() : "?", where);
+				what, where);
 			return;
 		}
 		default:

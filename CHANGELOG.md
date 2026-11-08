@@ -13,6 +13,18 @@
 
 ## [unreleased] — 2026-11-08
 
+### Fixed — tape crash on a building placement (live 14:41-14:43, rolled back)
+- Rex's game crashed (`C0000005` in `strnlen`, DossierExt+0x2d630) on a PLACE
+  right after queuing dogs. The linker map put it in the tape's PRODUCE/PLACE
+  line: `TechnoTypeClass::GetByTypeAndIndex` (0x48DCD0) indexes the type array
+  with no bounds check, and a PLACE can carry HeapID -1. `HouseClass::Place`
+  (0x4FB0E0) guards `heap < 0` itself, because it takes the building from the
+  house's factory, not from the event. We read `array[-1]` and printed it as a
+  name. Now our own `TypeOf()` uses the bounds-checked `GetItemOrDefault` per
+  type array, and an unresolved type logs `?(rtti N heap M)`.
+- Lesson: an engine lookup the engine itself guards before calling is not
+  safe to call raw from a hook. Check how the engine calls it first.
+
 ### Added — L1a opening book + L1b tactics tape (DESIGN §10c/§10d; record/log only)
 - Why: Rex wants the AI to learn from everything the player does, keep what
   works for similar situations, keep what fails as things to avoid and
